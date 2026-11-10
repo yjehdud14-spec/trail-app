@@ -1,150 +1,1943 @@
-<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>등산로 정보</title>
-<style>
-  :root {
-    --bg: #eef2ef; --surface: #fff; --line: #c9d4cd; --fg: #16211b; --muted: #56655c;
-    --accent: #1e6a4c; --accent-ink: #fff; --ok-bg: #ddf0e6; --ok: #1e6a4c;
-    --err-bg: #fce3e6; --err: #b3122a; --code-bg: #e3eae5;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1512; --surface: #18211c; --line: #33423a; --fg: #e6eee9; --muted: #9aaaa1;
-      --accent: #5cc497; --accent-ink: #06120c; --ok-bg: #163126; --ok: #5cc497;
-      --err-bg: #3a1219; --err: #ff6b7c; --code-bg: #212c26; color-scheme: dark;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  }
-  main {
-    max-width: 720px; margin: 0 auto;
-    padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
-    display: flex; flex-direction: column; gap: 16px;
-  }
-  h1 { margin: 0; font-size: 24px; }
-  h2 { margin: 0; font-size: 18px; }
-  p { margin: 0; }
-  .muted { color: var(--muted); font-size: 14px; }
-  form { display: flex; gap: 8px; }
-  input {
-    flex: 1; min-width: 0; min-height: 52px; padding: 10px 14px; font: inherit;
-    border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg);
-  }
-  button {
-    min-height: 52px; padding: 0 20px; font: inherit; font-weight: 700; cursor: pointer;
-    border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink);
-  }
-  button:disabled { opacity: .5; cursor: wait; }
-  input:focus-visible, button:focus-visible { outline: 3px solid #d9601f; outline-offset: 2px; }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .chips button { min-height: 36px; padding: 0 12px; font-weight: 500; font-size: 14px;
-    background: var(--surface); color: var(--fg); border: 1px solid var(--line); }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
-    display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-  .status.ok { background: var(--ok-bg); border-color: transparent; color: var(--ok); }
-  .status.err { background: var(--err-bg); border-color: transparent; color: var(--err); }
-  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
-  dt { color: var(--muted); }
-  .status dt { color: inherit; opacity: .8; }
-  dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-  code, pre { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
-  pre { margin: 0; padding: 10px; border-radius: 8px; background: var(--code-bg); color: var(--fg);
-    white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; }
-  .item h2 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-  .item h2 small { font-size: 14px; font-weight: 600; color: var(--muted); }
-  .key { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1E6A4C"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>산행 시간표</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: none;
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: none;
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: none;
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
 </style>
-</head>
-<body>
-<main>
-  <header>
-    <h1>등산로 정보</h1>
-    <p class="muted">산림청_산 정보 조회 (공공데이터포털)</p>
-  </header>
+<style>
+/* Layout: PC 기본 = 왼쪽 내비게이션 + 2단 작업 영역(왼쪽 일정·목록, 오른쪽 지도·날씨 고정). 900px 미만은 1단 카드 + 하단 탭바(한 손 조작). */
+:root{
+  --bg:#EEF2EF; --surface:#FFFFFF; --surface-2:#E3EAE5; --line:#C9D4CD;
+  --fg:#16211B; --muted:#56655C; --accent:#1E6A4C; --accent-ink:#FFFFFF;
+  --ribbon:#D9601F; --ribbon-bg:#FBE7DA; --warn:#9A5B00; --warn-bg:#FFF1D6;
+  --ok:#1E6A4C; --ok-bg:#DDF0E6; --danger:#C3112B; --danger-ink:#FFFFFF; --danger-bg:#FCE3E6;
+  --info-bg:#E2E9F5; --info:#284C86; --map-bg:#DCE5DF;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1512; --surface:#18211C; --surface-2:#212C26; --line:#33423A;
+  --fg:#E6EEE9; --muted:#9AAAA1; --accent:#5CC497; --accent-ink:#06120C;
+  --ribbon:#F08A4E; --ribbon-bg:#3A2418; --warn:#F2B754; --warn-bg:#352812;
+  --ok:#5CC497; --ok-bg:#163126; --danger:#FF4D61; --danger-ink:#1A0005; --danger-bg:#3A1219;
+  --info-bg:#1A2740; --info:#9DBBF0; --map-bg:#1C2621; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1512; --surface:#18211C; --surface-2:#212C26; --line:#33423A;
+  --fg:#E6EEE9; --muted:#9AAAA1; --accent:#5CC497; --accent-ink:#06120C;
+  --ribbon:#F08A4E; --ribbon-bg:#3A2418; --warn:#F2B754; --warn-bg:#352812;
+  --ok:#5CC497; --ok-bg:#163126; --danger:#FF4D61; --danger-ink:#1A0005; --danger-bg:#3A1219;
+  --info-bg:#1A2740; --info:#9DBBF0; --map-bg:#1C2621; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:1100;background:var(--surface)}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.3}
+h1{font-size:24px;font-weight:700}
+h2{font-size:18px;font-weight:700}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.mt{margin-top:12px}
 
-  <form id="search" role="search">
-    <input id="mountain" type="search" enterkeyhint="search" placeholder="산 이름 (예: 무등산)" autocomplete="off" required>
-    <button id="go" type="submit">검색</button>
-  </form>
-  <div class="chips" aria-label="예시 검색어">
-    <button type="button" data-q="무등산">무등산</button>
-    <button type="button" data-q="지리산">지리산</button>
-    <button type="button" data-q="한라산">한라산</button>
+/* ── 셸: PC 기본 ── */
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+.brand svg{width:32px;height:32px;color:var(--accent)}
+.brand b{font-size:18px}
+.navbtn{justify-content:flex-start;border:0;background:transparent;color:var(--muted);font-size:15px;gap:12px}
+.navbtn svg{width:22px;height:22px}
+.navbtn[aria-current="page"]{background:var(--surface-2);color:var(--accent)}
+.side .sos-side{margin-top:auto;min-height:64px;font-size:17px}
+.main{min-width:0;display:flex;flex-direction:column}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:1000;background:var(--surface);border-bottom:1px solid var(--line);padding-block:8px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:12px;min-height:64px}
+.bar .t{min-width:0;flex:1}
+.bar .t b{display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .t span{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{min-width:96px}
+.content{width:100%;max-width:1240px;margin:0 auto;padding-block:20px 48px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+.cols>*{min-width:0}
+.sticky-col{position:sticky;top:84px;display:flex;flex-direction:column;gap:16px}
+.tabbar{display:none}
+
+/* ── 모바일 ── */
+@media (max-width: 899px){
+  .shell{display:block}
+  .side{display:none}
+  .bar{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  .back{min-width:72px}
+  .content{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px calc(104px + env(safe-area-inset-bottom,0px))}
+  .cols{grid-template-columns:minmax(0,1fr)}
+  .sticky-col{position:static}
+  h1{font-size:22px}
+  .tabbar{display:block;position:fixed;left:0;right:0;bottom:0;z-index:1000;background:var(--surface);border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  .tabbar .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr) 1.25fr;gap:4px}
+  .map{height:280px!important}
+}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.eyebrow{font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.steps{display:flex;gap:6px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.steps b{color:var(--fg)}
+button,.btn{font:inherit;cursor:pointer;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:48px;padding:10px 14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center}
+button:hover,.btn:hover{border-color:var(--accent)}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--ribbon);outline-offset:2px}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-block{width:100%}
+.btn-sm{min-height:40px;padding:6px 12px;font-size:14px}
+.btn-ghost{background:transparent}
+.btn-danger{background:var(--danger);color:var(--danger-ink);border-color:var(--danger)}
+button:disabled{opacity:.45;cursor:not-allowed}
+label{font-size:14px;font-weight:600;display:flex;flex-direction:column;gap:6px}
+input,select,textarea{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);min-height:48px;padding:10px 12px;width:100%;min-width:0}
+textarea{min-height:88px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2>*{min-width:0}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--surface-2);color:var(--fg);white-space:nowrap}
+.b-ok{background:var(--ok-bg);color:var(--ok)}
+.b-warn{background:var(--warn-bg);color:var(--warn)}
+.b-danger{background:var(--danger-bg);color:var(--danger)}
+.b-ribbon{background:var(--ribbon-bg);color:var(--ribbon)}
+.b-info{background:var(--info-bg);color:var(--info)}
+.notice{border-radius:12px;padding:12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.n-warn{background:var(--warn-bg);color:var(--warn)}
+.n-info{background:var(--info-bg);color:var(--info)}
+.n-danger{background:var(--danger-bg);color:var(--danger)}
+.n-ok{background:var(--ok-bg);color:var(--ok)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{flex-direction:column;gap:0;font-size:15px;padding:8px 4px}
+.seg button small{font-family:var(--f-num);font-weight:500;font-size:12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.seg button[aria-pressed="true"] small{color:var(--accent-ink)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface-2);border-radius:12px;padding:10px 12px;min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-weight:600}
+.stat .v{font-family:var(--f-num);font-size:20px;font-weight:600;line-height:1.25}
+.stat .v small{font-size:13px}
+.stat.hero{grid-column:1/-1;background:var(--accent);color:var(--accent-ink);display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
+.stat.hero .k{color:var(--accent-ink);opacity:.85}
+.stat.hero .v{font-size:34px}
+@media (max-width: 899px){.stats{grid-template-columns:1fr 1fr}.stat .v{font-size:20px}}
+dl.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:14px}
+dl.facts dt{color:var(--muted)}
+dl.facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.courses{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.tl{display:flex;flex-direction:column}
+.tl-pt{position:relative;padding:12px 12px 12px 40px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.tl-pt::before{content:"";position:absolute;left:14px;top:16px;width:14px;height:14px;border-radius:50%;border:3px solid var(--accent);background:var(--surface)}
+.tl-pt.peak::before{border-color:var(--ribbon);background:var(--ribbon)}
+.tl-pt.end::before{background:var(--accent)}
+.tl-seg{margin-left:20px;border-left:3px dashed var(--line);padding:8px 0 8px 22px;font-size:14px;color:var(--muted)}
+.tl-times{display:grid;grid-template-columns:repeat(3,auto);gap:4px 18px;justify-content:start;margin-top:6px}
+.tl-times .k{font-size:11px;color:var(--muted);font-weight:600}
+.tl-times .v{font-family:var(--f-num);font-weight:600;font-size:18px}
+.coord{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.coord a{color:var(--info)}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{min-width:48px;padding:0}
+.stepper input{width:76px;text-align:center}
+.tab{min-height:56px;border:0;background:transparent;flex-direction:column;gap:2px;font-size:12px;padding:4px 2px;color:var(--muted)}
+.tab svg{width:22px;height:22px}
+.tab[aria-current="page"]{color:var(--accent);background:var(--surface-2)}
+.tab.sos{background:var(--danger);color:var(--danger-ink);font-size:13px;font-weight:700}
+.tab.sos[aria-current="page"]{outline:3px solid var(--ribbon);outline-offset:-3px}
+.call{min-height:76px;font-size:22px;font-weight:700;background:var(--danger);color:var(--danger-ink);border-color:var(--danger);border-radius:16px;width:100%}
+.prebox{white-space:pre-wrap;font-family:var(--f-body);font-size:14px;background:var(--surface-2);border-radius:10px;padding:12px;margin:0;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{min-height:40px;font-size:14px;font-weight:500;padding:6px 10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:1200;max-width:90vw}
+@media (max-width: 899px){.toast{bottom:calc(88px + env(safe-area-inset-bottom,0px))}}
+.wxtable,.rawtable{overflow-x:auto}
+.wxtable table{border-collapse:collapse;width:100%;font-size:14px}
+.wxtable th,.wxtable td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.raw{border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px}
+.raw dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0}
+.raw dt{color:var(--muted);font-family:var(--f-num);font-size:12px}
+.raw dd{margin:0;overflow-wrap:anywhere}
+details summary{cursor:pointer;font-weight:600;min-height:40px;display:flex;align-items:center}
+.ptrow{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.ptrow .ord{display:flex;gap:6px}
+.ptrow .ord button{min-width:48px;padding:0}
+.map{height:420px;border-radius:12px;border:1px solid var(--line);background:var(--map-bg);overflow:hidden;position:relative;z-index:0}
+.map-note{font-size:12px;color:var(--muted)}
+.leaflet-container{font-family:var(--f-body);background:var(--map-bg)}
+.leaflet-tooltip{font-family:var(--f-body);font-size:12px}
+.mlabel{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-weight:600;box-shadow:none}
+.mlabel::before{display:none}
+ol.guide{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+code{font-family:var(--f-num);font-size:13px;background:var(--surface-2);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="shell">
+  <aside class="side" aria-label="화면 이동"><div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 27l9-16 6 9 4-5 7 12z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="23" cy="7" r="3" fill="currentColor"/></svg><b>산행 시간표</b></div><div id="sidenav" class="stack" style="gap:4px"></div></aside>
+  <div class="main">
+    <header class="bar"><button class="back" data-act="back" id="backbtn" aria-label="뒤로 가기">← 뒤로</button><div class="t"><b id="bartitle">산행 시간표</b><span id="barsub"></span></div><span id="apibadge"></span></header>
+    <div class="content" id="app"></div>
   </div>
+</div>
+<nav class="tabbar" aria-label="화면 이동"><div class="in" id="tabs"></div></nav>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <section id="status" aria-live="polite"></section>
-  <section id="results" class="results" style="display:flex;flex-direction:column;gap:12px"></section>
-</main>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
-  // 이 페이지는 Netlify Function만 호출합니다. 인증키는 페이지에 없습니다.
-  const ENDPOINT = '/.netlify/functions/trail';
-
-  // 알려진 필드명 → 한글 이름 (모르는 필드는 원래 이름 그대로 표시)
-  const LABELS = { mntnNm: '산 이름', mntnHght: '높이(m)', mntnAdd: '소재지', mntnInfoAraCd: '지역 코드', mntnInfoSsnCd: '계절 코드', mntnInfoThmCd: '주제 코드' };
-
-  const $ = id => document.getElementById(id);
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-  async function search(name) {
-    name = name.trim();
-    if (!name) return;
-    $('go').disabled = true;
-    $('status').innerHTML = `<div class="card"><p>‘${esc(name)}’ 조회 중…</p></div>`;
-    $('results').innerHTML = '';
-
-    let data, httpStatus;
-    try {
-      const res = await fetch(`${ENDPOINT}?mountain=${encodeURIComponent(name)}`);
-      httpStatus = res.status;
-      const text = await res.text();
-      try { data = JSON.parse(text); }
-      catch { data = { ok: false, resultCode: null, resultMsg: '함수 응답이 JSON이 아닙니다', raw: text.slice(0, 500) }; }
-    } catch (e) {
-      data = { ok: false, resultCode: null, resultMsg: '함수에 연결하지 못했습니다: ' + e.message };
-    } finally {
-      $('go').disabled = false;
+/*CORE-START*/
+/* ───────── 1. 코스 데이터 (CourseData) ─────────
+   예시 코스의 구간 거리·시간·좌표는 공식 자료가 아닌 '계산 테스트용 예시'입니다(좌표는 근사값).
+   산림청 API로 확인된 데이터가 들어오면 source.kind = 'official' 과 출처·확인일을 채웁니다. */
+const CourseData = (() => {
+  const EXAMPLE_SRC = { kind: 'example', label: '계산 테스트용 예시', checkedAt: '2026-11-10' };
+  const mountains = [
+    { id: 'jirisan', name: '지리산', region: '경남·전남·전북', park: '지리산국립공원' },
+    { id: 'baegun-gwangyang', name: '백운산', region: '전남 광양' },
+    { id: 'baegun-pocheon', name: '백운산', region: '경기 포천' }
+  ];
+  const P = (id, name, kind, lat, lng) => ({ id, name, kind, lat, lng, approx: true });
+  const S = (km, min, steep) => ({ km, min, steep: !!steep });
+  const courses = [
+    {
+      id: 'ex-jungsanri', mountainId: 'jirisan', name: '중산리 순환 (천왕봉·장터목)', type: 'loop', builtin: true, area: '경남 산청군',
+      points: [P('jsr-s', '중산리 탐방안내소', 'start', 35.2795, 127.7470), P('jsr-1', '칼바위', 'waypoint', 35.2985, 127.7445), P('jsr-2', '로타리대피소', 'shelter', 35.3200, 127.7395),
+               P('jsr-3', '천왕봉', 'peak', 35.3369, 127.7306), P('jsr-4', '장터목대피소', 'shelter', 35.3355, 127.7170), P('jsr-5', '유암폭포', 'waypoint', 35.3125, 127.7290), P('jsr-e', '중산리 탐방안내소', 'end', 35.2795, 127.7470)],
+      segments: [S(2.0, 60), S(1.4, 70, true), S(2.0, 100, true), S(1.7, 60), S(2.6, 80), S(2.7, 80)],
+      source: EXAMPLE_SRC, officialDifficulty: null,
+      defaults: { startTime: '07:00', rests: { 'jsr-4': { min: 40, kind: 'meal' } } }
+    },
+    {
+      id: 'ex-baengmudong', mountainId: 'jirisan', name: '백무동 원점회귀 (장터목·천왕봉)', type: 'outback', builtin: true, area: '경남 함양군',
+      points: [P('bmd-s', '백무동 탐방지원센터', 'start', 35.3640, 127.6530), P('bmd-1', '하동바위', 'waypoint', 35.3560, 127.6660), P('bmd-2', '참샘', 'rest', 35.3520, 127.6760), P('bmd-3', '소지봉', 'waypoint', 35.3460, 127.6900),
+               P('bmd-4', '장터목대피소', 'shelter', 35.3355, 127.7170), P('bmd-5', '천왕봉', 'peak', 35.3369, 127.7306), P('bmd-6', '장터목대피소', 'shelter', 35.3355, 127.7170),
+               P('bmd-7', '소지봉', 'waypoint', 35.3460, 127.6900), P('bmd-8', '참샘', 'rest', 35.3520, 127.6760), P('bmd-9', '하동바위', 'waypoint', 35.3560, 127.6660), P('bmd-e', '백무동 탐방지원센터', 'end', 35.3640, 127.6530)],
+      segments: [S(1.9, 60), S(0.7, 30), S(1.2, 60, true), S(2.0, 80, true), S(1.7, 60), S(1.7, 45), S(2.0, 60), S(1.2, 40), S(0.7, 20), S(1.9, 45)],
+      source: EXAMPLE_SRC, officialDifficulty: null,
+      defaults: { startTime: '06:30', rests: { 'bmd-6': { min: 40, kind: 'meal' } } }
     }
-    renderStatus(name, data, httpStatus);
-    renderItems(data.items || []);
-  }
+  ];
+  const TYPES = {
+    outback: { label: '원점회귀', desc: '올라간 길을 되짚어 복귀' },
+    loop: { label: '순환형', desc: '다른 길로 출발지에 복귀' },
+    oneway: { label: '편도형', desc: '다른 지점에서 종료' }
+  };
+  const KINDS = { start: '들머리', end: '하산 지점', peak: '정상', shelter: '대피소', rest: '쉼터', waypoint: '경유지' };
+  return { mountains, courses, TYPES, KINDS, EXAMPLE_SRC };
+})();
 
-  function renderStatus(name, d, fnStatus) {
-    $('status').innerHTML = `
-      <div class="card status ${d.ok ? 'ok' : 'err'}">
-        <h2>${d.ok ? '조회 성공' : '조회 실패'} · ‘${esc(name)}’</h2>
-        <dl>
-          <dt>resultCode</dt><dd><code>${esc(d.resultCode ?? '(없음)')}</code></dd>
-          <dt>resultMsg</dt><dd><code>${esc(d.resultMsg ?? '(없음)')}</code></dd>
-          <dt>API HTTP</dt><dd>${esc(d.httpStatus ?? '-')}</dd>
-          <dt>함수 HTTP</dt><dd>${esc(fnStatus ?? '-')}</dd>
-          ${d.totalCount != null ? `<dt>totalCount</dt><dd>${esc(d.totalCount)}</dd>` : ''}
-          ${d.requestUrl ? `<dt>요청 주소</dt><dd><code>${esc(d.requestUrl)}</code></dd>` : ''}
-        </dl>
-        ${d.raw ? `<details><summary>원문 응답 일부</summary><pre>${esc(d.raw)}</pre></details>` : ''}
-      </div>`;
+/* ───────── 2. 난이도 판단 ───────── */
+const Difficulty = {
+  evaluate(course) {
+    if (course.officialDifficulty) return { level: course.officialDifficulty.level, basis: 'official', reasons: [course.officialDifficulty.source] };
+    const segs = course.segments || [];
+    if (!segs.length || segs.some(s => !(s.km > 0) || !(s.min > 0))) return { level: null, basis: 'none', reasons: ['구간 거리 또는 기본 이동시간 자료가 부족합니다'] };
+    const km = segs.reduce((a, s) => a + s.km, 0), min = segs.reduce((a, s) => a + s.min, 0);
+    const steep = segs.filter(s => s.steep).length;
+    const reasons = []; let score = 0;
+    if (km >= 12) { score += 2; reasons.push(`총거리 ${km.toFixed(1)}km (12km 이상)`); }
+    else if (km >= 6) { score += 1; reasons.push(`총거리 ${km.toFixed(1)}km (6~12km)`); }
+    else reasons.push(`총거리 ${km.toFixed(1)}km (6km 미만)`);
+    if (min >= 420) { score += 2; reasons.push(`기본 이동시간 ${Fmt.dur(min)} (7시간 이상)`); }
+    else if (min >= 240) { score += 1; reasons.push(`기본 이동시간 ${Fmt.dur(min)} (4~7시간)`); }
+    if (steep >= 2) { score += 2; reasons.push(`급경사 표시 구간 ${steep}곳`); }
+    else if (steep === 1) { score += 1; reasons.push('급경사 표시 구간 1곳'); }
+    return { level: score >= 4 ? '상급' : score >= 2 ? '중급' : '초급', basis: 'estimated', reasons };
   }
+};
 
-  function renderItems(items) {
-    if (!items.length) { $('results').innerHTML = ''; return; }
-    $('results').innerHTML = items.map(it => {
-      const title = it.mntnNm || Object.values(it)[0] || '이름 없음';
-      const rows = Object.entries(it)
-        .filter(([, v]) => v !== '' && v != null && typeof v !== 'object')
-        .map(([k, v]) => `<dt>${esc(LABELS[k] || k)} <span class="key">${LABELS[k] ? esc(k) : ''}</span></dt><dd>${esc(v)}</dd>`)
-        .join('');
-      return `<article class="card item"><h2>${esc(title)}${it.mntnHght ? `<small>${esc(it.mntnHght)}m</small>` : ''}</h2><dl>${rows}</dl></article>`;
-    }).join('');
+/* ───────── 3. 시각·좌표 포맷 (모든 시각은 한국 시간) ───────── */
+const Fmt = {
+  toMin(hhmm) { if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null; const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; },
+  clock(min) { const r = ((min % 1440) + 1440) % 1440; return String(Math.floor(r / 60)).padStart(2, '0') + ':' + String(r % 60).padStart(2, '0'); },
+  dayTag(min) { const d = Math.floor(min / 1440); return d === 1 ? '다음 날' : d > 1 ? `${d}일 뒤` : d < 0 ? '전날' : ''; },
+  time(min) { const t = Fmt.dayTag(min); return Fmt.clock(min) + (t ? ` (${t})` : ''); },
+  dur(min) { const h = Math.floor(min / 60), m = min % 60; return h ? (m ? `${h}시간 ${m}분` : `${h}시간`) : `${m}분`; },
+  km(v) { return (Math.round(v * 10) / 10).toFixed(1) + 'km'; },
+  date(iso) { if (!iso) return ''; const [y, mo, d] = iso.split('-').map(Number); const w = '일월화수목금토'[new Date(Date.UTC(y, mo - 1, d)).getUTCDay()]; return `${y}년 ${mo}월 ${d}일 (${w})`; },
+  kstNow() { const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()); const g = t => p.find(x => x.type === t).value; return { date: `${g('year')}-${g('month')}-${g('day')}`, min: Number(g('hour')) * 60 + Number(g('minute')), text: `${g('year')}-${g('month')}-${g('day')} ${g('hour')}:${g('minute')}` }; },
+  daysBetween(a, b) { const t = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); }; return Math.round((t(b) - t(a)) / 86400000); },
+  dec(v, n = 5) { return Number(v).toFixed(n); },
+  dms(v, pos, neg) { const s = v < 0 ? neg : pos; v = Math.abs(v); const d = Math.floor(v), mf = (v - d) * 60, m = Math.floor(mf), sec = (mf - m) * 60; return `${s} ${d}° ${String(m).padStart(2, '0')}′ ${sec.toFixed(1).padStart(4, '0')}″`; },
+  latlng(lat, lng) { return `위도 ${Fmt.dec(lat)}, 경도 ${Fmt.dec(lng)}`; }
+};
+
+/* ───────── 4. 일정 계산 — 순수 함수 ───────── */
+const Schedule = {
+  SPEEDS: { slow: { label: '여유', mult: 1.25 }, normal: { label: '보통', mult: 1.0 }, fast: { label: '빠름', mult: 0.85 } },
+  compute(course, plan) {
+    const mult = (Schedule.SPEEDS[plan.speed] || Schedule.SPEEDS.normal).mult;
+    const start = Fmt.toMin(plan.startTime);
+    if (start == null) return null;
+    let t = start, moveSum = 0, restSum = 0, kmSum = 0;
+    const rows = course.points.map((p, i) => {
+      const last = i === course.points.length - 1;
+      const r = !last && plan.rests && plan.rests[p.id];
+      const restMin = r ? Math.max(0, Math.round(Number(r.min) || 0)) : 0;
+      const arrive = t, depart = arrive + restMin;
+      const seg = course.segments[i];
+      const move = seg ? Math.round(seg.min * mult) : 0;
+      if (seg) { moveSum += move; kmSum += seg.km; }
+      restSum += restMin;
+      t = last ? arrive : depart + move;
+      return { point: p, index: i, arrive, restMin, restKind: r ? r.kind : null, depart: last ? null : depart,
+               next: seg ? { km: seg.km, baseMin: seg.min, min: move, steep: seg.steep, to: course.points[i + 1].name } : null };
+    });
+    const end = rows[rows.length - 1].arrive;
+    const summary = { km: kmSum, moveMin: moveSum, restMin: restSum, start, end, mult };
+    const home = Fmt.toMin(plan.homeDepart), drive = Number(plan.driveMin);
+    if (home != null && drive > 0) summary.access = { home, arrive: home + drive, slackMin: start - (home + drive) };
+    const target = Fmt.toMin(plan.targetEnd);
+    if (target != null) summary.target = { target, diffMin: target - end };
+    return { rows, summary };
+  },
+  expectedAt(sched, plan, now) {
+    if (!sched || plan.date !== now.date) return null;
+    const m = now.min;
+    for (let i = 0; i < sched.rows.length; i++) {
+      const r = sched.rows[i], n = sched.rows[i + 1];
+      if (r.depart != null && m >= r.arrive && m < r.depart) return `${r.point.name} 휴식 중`;
+      if (n && r.depart != null && m >= r.depart && m < n.arrive) return `${r.point.name} → ${n.point.name} 구간 이동 중`;
+    }
+    return m < sched.summary.start ? '아직 출발 전' : '하산 완료 예정 시각 이후';
   }
+};
 
-  $('search').addEventListener('submit', e => { e.preventDefault(); search($('mountain').value); });
-  document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => { $('mountain').value = b.dataset.q; search(b.dataset.q); }));
+/* ───────── 5. 일몰 천문 계산 (NOAA 근사식, 지형 미반영) ───────── */
+const Sun = {
+  sunsetKST(iso, lat, lng) {
+    const [y, mo, d] = iso.split('-').map(Number);
+    const N = Math.round((Date.UTC(y, mo - 1, d) - Date.UTC(y, 0, 0)) / 86400000);
+    const g = 2 * Math.PI / 365 * (N - 1);
+    const eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+    const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+    const rad = Math.PI / 180, la = lat * rad;
+    const c = Math.cos(90.833 * rad) / (Math.cos(la) * Math.cos(dec)) - Math.tan(la) * Math.tan(dec);
+    if (c < -1 || c > 1) return null;
+    return Math.round(720 - 4 * (lng - Math.acos(c) / rad) - eq + 540);
+  }
+};
+
+/* ───────── 6. 거리·좌표 유틸 ───────── */
+const Geo = {
+  km(a, b) { const R = 6371, r = Math.PI / 180; const dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+    const h = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); },
+  valid(lat, lng) { return isFinite(lat) && isFinite(lng) && lat > 32 && lat < 39.5 && lng > 123 && lng < 132.5; },
+  // 공공데이터 원자료에서 위경도로 보이는 필드를 찾음 (필드명이 기관마다 달라 이름 패턴 + 값 범위로 판정)
+  fromItem(it) {
+    let lat = null, lng = null;
+    for (const [k, v] of Object.entries(it || {})) {
+      const n = parseFloat(v); if (!isFinite(n)) continue; const key = k.toLowerCase();
+      if (lat == null && /^(lat|la|latitude|위도|mapy|ycrd|y_crd|ycoord)$|lat$|위도/.test(key) && n > 32 && n < 39.5) lat = n;
+      else if (lng == null && /^(lng|lon|lot|longitude|경도|mapx|xcrd|x_crd|xcoord)$|(lng|lon|lot)$|경도/.test(key) && n > 123 && n < 132.5) lng = n;
+    }
+    return lat != null && lng != null ? { lat, lng } : null;
+  }
+};
+/*CORE-END*/
+
+/* ───────── 7. 외부 데이터 (Api) ─────────
+   브라우저는 API 키를 갖지 않습니다. 같은 주소에 배포된 서버(worker.js)의 /api/* 만 호출하고,
+   서버가 공공데이터포털 인증키를 붙여 산림청·기상청·소방청·행정안전부 API를 대신 호출합니다.
+   서버가 없으면 '미연결', 응답이 실패하면 '조회 실패'. 실패를 '없음'으로 처리하지 않습니다. */
+/* 실행 환경: Claude 화면(Artifact)은 외부 호출을 모두 차단하므로 구분해서 안내합니다. */
+const ENV = { inClaude: /(^|\.)(claude\.ai|claudeusercontent\.com|anthropic\.com)$/.test(location.hostname) || /claude/.test(location.hostname), local: location.protocol === 'file:' };
+/* 내려받는 단독 실행 HTML에만 빌드 시 인증키가 들어갑니다(build.mjs). 배포용 index.html과 Artifact에는 비어 있습니다. */
+const DIRECT_KEY = ''/*DIRECT_KEY*/;
+const DIRECT_DEFAULTS = { mountainUrl: 'https://apis.data.go.kr/1400000/trailInfoService', mountainParam: 'mntnNm', trailUrl: '', trailParam: 'mntnNm' };
+const Direct = {
+  usable() { return !!DIRECT_KEY && !ENV.inClaude; },
+  async call(urlStr, nameParam, name) {
+    const u = new URL(urlStr);
+    u.searchParams.set('serviceKey', DIRECT_KEY); u.searchParams.set('pageNo', '1'); u.searchParams.set('numOfRows', '50');
+    if (nameParam && name) u.searchParams.set(nameParam, name);
+    let r;
+    try { const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 15000); r = await fetch(u.toString(), { signal: ctl.signal }); clearTimeout(tm); }
+    catch (e) { throw new Error(e.name === 'AbortError' ? '응답 시간 초과(15초)' : '브라우저에서 공공데이터포털을 직접 부를 수 없습니다(CORS 차단). API 서버(worker.js)를 배포해야 합니다'); }
+    const text = await r.text();
+    if (!r.ok) throw new Error(`공공데이터포털 HTTP ${r.status}` + (r.status === 404 ? ' · 요청 주소(오퍼레이션 경로)를 확인하세요' : ''));
+    return Direct.parse(text);
+  },
+  friendly(code) {
+    if (/SERVICE_KEY_IS_NOT_REGISTERED/.test(code)) return '인증키가 아직 등록되지 않았습니다 (승인 후 1~2시간 동기화 대기 또는 이 API 활용신청 누락)';
+    if (/LIMITED_NUMBER/.test(code)) return '일일 호출 한도를 초과했습니다';
+    if (/SERVICE_ACCESS_DENIED/.test(code)) return '이 API에 대한 활용신청 승인이 없습니다';
+    return '공공데이터포털 오류 ' + code;
+  },
+  parse(text) {
+    const t = text.trim();
+    if (t.startsWith('{')) {
+      const j = JSON.parse(t); const h = (j.response && j.response.header) || j.header;
+      if (h && h.resultCode && !['00', '0', '0000', '03'].includes(String(h.resultCode))) throw new Error(Direct.friendly(h.resultCode + ' ' + (h.resultMsg || '')));
+      const it = j?.response?.body?.items?.item ?? j?.body?.items?.item ?? j?.items?.item ?? j?.data ?? [];
+      return Array.isArray(it) ? it : it ? [it] : [];
+    }
+    const doc = new DOMParser().parseFromString(t, 'text/xml');
+    const auth = doc.querySelector('returnAuthMsg'), code = doc.querySelector('resultCode'), msg = doc.querySelector('resultMsg');
+    if (auth && auth.textContent && auth.textContent !== 'NORMAL_CODE') throw new Error(Direct.friendly(auth.textContent));
+    if (code && !['00', '0', '0000', '03'].includes(code.textContent.trim())) throw new Error(Direct.friendly(code.textContent + ' ' + (msg ? msg.textContent : '')));
+    let nodes = [...doc.querySelectorAll('item')]; if (!nodes.length) nodes = [...doc.querySelectorAll('row')];
+    return nodes.map(n => Object.fromEntries([...n.children].map(c => [c.tagName, c.textContent.trim()])));
+  }
+};
+
+const Api = {
+  base: null, services: {}, checkedAt: null, lastError: '',
+  url(path) { return (this.base || '') + path; },
+  async probe(customBase) {
+    const tries = customBase ? [customBase.replace(/\/$/, '')] : [''];
+    for (const b of tries) {
+      try {
+        const r = await fetchT(b + '/api/health', 6000);
+        const j = await r.json();
+        if (j && j.ok) { this.base = b; this.services = j.services || {}; this.checkedAt = Fmt.kstNow().text; this.lastError = ''; return true; }
+      } catch (e) { this.lastError = String(e.message || e); }
+    }
+    this.base = null; this.services = {}; this.checkedAt = Fmt.kstNow().text; return false;
+  },
+  has(svc) { return this.base != null && !!this.services[svc]; },
+  async get(svc, path, params) {
+    if (!this.has(svc)) return { status: 'unconnected', reason: this.base == null ? 'server' : 'service' };
+    try {
+      const r = await fetchT(this.url(path) + '?' + new URLSearchParams(params), 15000);
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j && j.error ? j.error : 'HTTP ' + r.status);
+      return { status: 'ok', data: j };
+    } catch (e) { return { status: 'failed', error: String(e.message || e) }; }
+  },
+  WEATHER_DAYS: 3,
+  weather(q) {
+    if (!this.has('weather')) return Promise.resolve({ status: 'unconnected', reason: this.base == null ? 'server' : 'service' });
+    const d = Fmt.daysBetween(Fmt.kstNow().date, q.date);
+    if (d < 0 || d > this.WEATHER_DAYS) return Promise.resolve({ status: 'out_of_range' });
+    return this.get('weather', '/api/weather', { date: q.date, points: JSON.stringify(q.points) });
+  },
+  /* Netlify 배포: 페이지는 /.netlify/functions/trail?mountain= 만 호출 (키는 Netlify 환경 변수) */
+  TRAIL_FN: '/.netlify/functions/trail', netlify: false, _memo: {},
+  async probeNetlify() {
+    if (ENV.inClaude || ENV.local) return false;
+    try { const r = await fetchT(this.TRAIL_FN, 6000); const j = await r.json(); this.netlify = !!(j && 'resultMsg' in j); }
+    catch (e) { this.netlify = false; }
+    return this.netlify;
+  },
+  netlifyTrail(name) {
+    const m = this._memo[name]; if (m && Date.now() - m.at < 60000) return m.p;
+    const p = (async () => {
+      try {
+        const r = await fetchT(this.TRAIL_FN + '?mountain=' + encodeURIComponent(name), 15000);
+        let j; try { j = await r.json(); } catch (e) { return { status: 'unconnected', reason: 'server' }; }
+        const meta = { resultCode: j.resultCode, resultMsg: j.resultMsg, httpStatus: j.httpStatus };
+        if (!j.ok) return { status: 'failed', error: `resultCode ${j.resultCode ?? '(없음)'} · ${j.resultMsg ?? ''}`, meta };
+        return { status: 'ok', meta, data: { ok: true, source: '산림청_명산등산로 (Netlify 함수)', fetchedAt: Fmt.kstNow().text, items: j.items || [], ...meta } };
+      } catch (e) { return { status: 'failed', error: '함수에 연결하지 못했습니다: ' + (e.message || e) }; }
+    })();
+    this._memo[name] = { at: Date.now(), p }; return p;
+  },
+  // 서버(worker) → Netlify 함수 → 내장 키 직접 호출 순서로 시도
+  async forest(svc, path, name, urlKey, paramKey, source) {
+    if (this.has(svc)) return this.get(svc, path, { name });
+    if (ENV.inClaude) return { status: 'unconnected', reason: 'claude' };
+    if (this.netlify) return this.netlifyTrail(name);
+    if (!Direct.usable()) return { status: 'unconnected', reason: this.base == null ? 'server' : 'service' };
+    const d = { ...DIRECT_DEFAULTS, ...(state.config.direct || {}) };
+    if (!d[urlKey]) return { status: 'unconnected', reason: 'nourl' };
+    try {
+      let items = await Direct.call(d[urlKey], d[paramKey], name);
+      const f = items.filter(it => JSON.stringify(it).includes(name)); if (f.length) items = f;
+      return { status: 'ok', data: { ok: true, source: source + ' (브라우저 직접 호출)', fetchedAt: Fmt.kstNow().text, items } };
+    } catch (e) { return { status: 'failed', error: String(e.message || e) }; }
+  },
+  forestMountain(name) { return this.forest('forestMountain', '/api/forest/mountain', name, 'mountainUrl', 'mountainParam', '산림청_산 정보 조회'); },
+  forestTrails(name) { return this.forest('forestTrail', '/api/forest/trails', name, 'trailUrl', 'trailParam', '산림청_산림공간정보_등산로정보'); },
+  centers(q) { return this.get('centers', '/api/centers', q); },
+  disaster(q) { return this.get('disaster', '/api/disaster', q); }
+};
+async function fetchT(url, ms) {
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), ms);
+  try { return await fetch(url, { signal: ctl.signal, headers: { accept: 'application/json' } }); } finally { clearTimeout(tm); }
+}
+
+const LINKS = {
+  kma: 'https://www.weather.go.kr/w/index.do',
+  knps: 'https://www.knps.or.kr/',
+  nfa: 'https://www.nfa.go.kr/',
+  safekorea: 'https://www.safekorea.go.kr/',
+  kasi: 'https://astro.kasi.re.kr/life/pageView/9',
+  datagokr: 'https://www.data.go.kr/',
+  mapSearch: q => 'https://map.kakao.com/?q=' + encodeURIComponent(q),
+  mapPin: (name, lat, lng) => `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`
+};
+
+/* ───────── 8. 지도 (MapView) — Leaflet + OpenStreetMap 타일 ───────── */
+const MapView = {
+  map: null,
+  mount(id, layers) {
+    if (this.map) { try { this.map.remove(); } catch (e) { } this.map = null; }
+    const el = document.getElementById(id); if (!el) return;
+    const note = document.getElementById(id + '-note');
+    if (!window.L) { el.innerHTML = '<div class="notice n-warn" style="margin:12px">지도 라이브러리를 불러오지 못했습니다. 아래 지도 앱 링크를 이용하세요.</div>'; return; }
+    const css = getComputedStyle(document.documentElement);
+    const accent = css.getPropertyValue('--accent').trim(), ribbon = css.getPropertyValue('--ribbon').trim(), info = css.getPropertyValue('--info').trim(), danger = css.getPropertyValue('--danger').trim();
+    const map = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false, zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false });
+    this.map = map;
+    let tileFailed = false;
+    const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' });
+    tiles.on('tileerror', () => { if (!tileFailed && note) { tileFailed = true; note.textContent = '배경 지도 타일을 불러올 수 없는 환경입니다(Claude 미리보기 등). 경로와 지점은 좌표대로 표시됩니다.'; } });
+    tiles.addTo(map);
+    const bounds = [];
+    if (layers.route && layers.route.length > 1) { L.polyline(layers.route, { color: accent, weight: 5, opacity: .85 }).addTo(map); layers.route.forEach(p => bounds.push(p)); }
+    const seen = new Set();
+    (layers.points || []).forEach(p => {
+      const key = p.lat.toFixed(4) + ',' + p.lng.toFixed(4); const dup = seen.has(key); seen.add(key);
+      const col = p.kind === 'peak' ? ribbon : p.kind === 'extra' ? info : accent;
+      const m = L.circleMarker([p.lat, p.lng], { radius: p.kind === 'peak' ? 9 : 7, color: col, fillColor: col, fillOpacity: p.kind === 'extra' ? .5 : .95, weight: 2 }).addTo(map);
+      m.bindPopup(`<b>${esc(p.label)}</b><br><span class="num">${Fmt.dec(p.lat)}, ${Fmt.dec(p.lng)}</span>${p.note ? '<br>' + esc(p.note) : ''}`);
+      if (!dup && p.showLabel !== false) m.bindTooltip(esc(p.label), { permanent: true, direction: 'right', offset: [8, 0], className: 'mlabel' });
+      bounds.push([p.lat, p.lng]);
+    });
+    if (layers.me) {
+      L.circle([layers.me.lat, layers.me.lng], { radius: layers.me.acc || 30, color: danger, weight: 1, fillOpacity: .15 }).addTo(map);
+      L.circleMarker([layers.me.lat, layers.me.lng], { radius: 8, color: '#fff', weight: 3, fillColor: danger, fillOpacity: 1 }).addTo(map).bindTooltip('내 위치', { permanent: true, direction: 'top', className: 'mlabel' });
+      bounds.push([layers.me.lat, layers.me.lng]);
+    }
+    if (bounds.length > 1) map.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 });
+    else if (bounds.length === 1) map.setView(bounds[0], 14);
+    else map.setView([36.3, 127.8], 7);
+    setTimeout(() => { if (this.map === map) { try { map.invalidateSize(); } catch (e) { } } }, 50);
+  }
+};
+
+/* ───────── 9. 기기 저장 ───────── */
+const Store = {
+  KEY: 'sanhaeng-timetable-v1', ok: true, lastError: '',
+  load() { try { const raw = localStorage.getItem(this.KEY); return raw ? JSON.parse(raw) : null; } catch (e) { this.ok = false; this.lastError = '기기 저장소를 읽을 수 없습니다'; return null; } },
+  save(data) { try { localStorage.setItem(this.KEY, JSON.stringify(data)); this.ok = true; return true; } catch (e) { this.ok = false; this.lastError = '기기에 저장하지 못했습니다'; return false; } }
+};
+
+/* ───────── 10. 화면 ───────── */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const VIEWS = ['course', 'plan', 'table', 'saved', 'sos', 'edit', 'api'];
+const TITLES = { course: '산·코스 선택', plan: '일정 설정', table: '산행 시간표', saved: '저장한 일정', sos: '긴급 도움', edit: '코스 편집', api: '데이터 연동' };
+
+const state = {
+  tab: 'course', query: '', openMountain: 'jirisan', courseId: 'ex-jungsanri',
+  plan: null, planId: null, userCourses: [], userMountains: [], saved: [],
+  config: { apiBase: '' }, editor: null, apiSearch: null, copyFallback: null,
+  results: {}, sos: { geo: { status: 'idle' }, sign: '', last: '', detail: '', injured: '' }
+};
+const nav = { stack: ['course'] };
+
+function allMountains() { return [...CourseData.mountains, ...state.userMountains]; }
+function allCourses() { return [...CourseData.courses, ...state.userCourses]; }
+function course(id = state.courseId) { return allCourses().find(c => c.id === id) || null; }
+function mountainOf(c) { return allMountains().find(m => m.id === c.mountainId) || { name: '알 수 없는 산', region: '' }; }
+function trailhead(c) { const p = c && c.points[0]; return p && Geo.valid(p.lat, p.lng) ? p : null; }
+function newPlan(c) {
+  const d = c.defaults || {};
+  return { date: Fmt.kstNow().date, startTime: d.startTime || '07:00', speed: 'normal', rests: JSON.parse(JSON.stringify(d.rests || {})),
+           homeDepart: '', driveMin: '', targetEnd: '', limit: { time: '', pointId: '', source: '' } };
+}
+function persist() { return Store.save({ userCourses: state.userCourses, userMountains: state.userMountains, saved: state.saved, config: state.config }); }
+
+/* 라우팅: 해시(#course 등) + 내부 스택 → ‘← 뒤로’와 브라우저 뒤로 가기 모두 지원 */
+function go(v) {
+  if (!VIEWS.includes(v)) v = 'course';
+  if (v === state.tab) { window.scrollTo(0, 0); return; }
+  nav.stack.push(v); show(v);
+  try { history.pushState({ v }, '', '#' + v); } catch (e) { }
+}
+function back() {
+  if (nav.stack.length > 1) { nav.stack.pop(); const v = nav.stack[nav.stack.length - 1]; show(v); try { history.replaceState({ v }, '', '#' + v); } catch (e) { } }
+  else if (state.tab !== 'course') { nav.stack = ['course']; show('course'); }
+}
+window.addEventListener('popstate', () => {
+  const v = (location.hash || '#course').slice(1);
+  if (!VIEWS.includes(v) || v === state.tab) return;
+  if (nav.stack[nav.stack.length - 2] === v) nav.stack.pop(); else nav.stack.push(v);
+  show(v);
+});
+function show(v) {
+  if (v === 'edit' && !state.editor) v = 'course';
+  if (state.tab === 'edit' && v !== 'edit') state.editor = null;
+  state.tab = v; state.copyFallback = null;
+  if (v === 'sos') { state.results.centers = null; state.results.disaster = null; }
+  render(); window.scrollTo(0, 0);
+  if (v === 'sos') loadEmergencyData();
+  if (v === 'course') loadForest();
+}
+
+let toastT;
+function toast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2600); }
+function copyText(text, key) {
+  const fallback = () => { state.copyFallback = { key, text }; rerender(); requestAnimationFrame(() => { const t = document.getElementById('fb-' + key); if (t) { t.focus(); t.select(); } }); toast('자동 복사가 안 됩니다. 표시된 글을 길게 눌러 복사하세요'); };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => { state.copyFallback = null; toast('복사했습니다'); }, fallback);
+    else fallback();
+  } catch (e) { fallback(); }
+}
+
+const ICONS = {
+  course: '<path d="M3 20l6-12 4 7 3-4 5 9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  plan: '<rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="2"/>',
+  table: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  saved: '<path d="M6 3h12v18l-6-4-6 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  api: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  sos: '<path d="M12 3v10M12 17v2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
+};
+const ic = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+function renderChrome() {
+  const cur = v => state.tab === v || (v === 'course' && state.tab === 'edit') ? 'aria-current="page"' : '';
+  document.getElementById('tabs').innerHTML = [['course', '코스'], ['plan', '일정'], ['table', '시간표'], ['saved', '저장']].map(([k, l]) =>
+    `<button class="tab" data-act="go" data-v="${k}" ${cur(k)}>${ic(k)}${l}</button>`).join('') +
+    `<button class="tab sos" data-act="go" data-v="sos" ${cur('sos')}>${ic('sos')}긴급 도움</button>`;
+  document.getElementById('sidenav').innerHTML = [['course', '1. 산·코스 선택'], ['plan', '2. 일정 설정'], ['table', '3. 산행 시간표'], ['saved', '저장한 일정'], ['api', '데이터 연동']].map(([k, l]) =>
+    `<button class="navbtn" data-act="go" data-v="${k}" ${cur(k)}>${ic(k === 'api' ? 'api' : k)}${l}</button>`).join('') +
+    `<button class="btn-danger sos-side" data-act="go" data-v="sos" ${cur('sos')}>긴급 도움 · 119</button>`;
+  const c = course();
+  document.getElementById('bartitle').textContent = TITLES[state.tab];
+  document.getElementById('barsub').textContent = c && state.tab !== 'course' && state.tab !== 'api' ? `${mountainOf(c).name} · ${c.name}` : '한국 시간 기준';
+  const bb = document.getElementById('backbtn'); bb.disabled = nav.stack.length <= 1 && state.tab === 'course';
+  document.getElementById('apibadge').innerHTML = Api.base == null && Api.netlify ? '<button class="badge b-ok" data-act="go" data-v="api" style="min-height:32px;border:0">산림청 API 연결</button>' : Api.base == null && Direct.usable() ? '<button class="badge b-info" data-act="go" data-v="api" style="min-height:32px;border:0">인증키 내장 모드</button>' : Api.base != null ? '<button class="badge b-ok" data-act="go" data-v="api" style="min-height:32px;border:0">API 연결</button>' : '<button class="badge b-warn" data-act="go" data-v="api" style="min-height:32px;border:0">API 미연결</button>';
+}
+function stepsBar(cur) {
+  const s = ['산·코스 선택', '일정 설정', '산행 시간표'];
+  return `<div class="steps" aria-label="진행 단계">${s.map((x, i) => i === cur ? `<b>${i + 1}. ${x}</b>` : `<span>${i + 1}. ${x}</span>`).join('<span aria-hidden="true">›</span>')}</div>`;
+}
+function storageBanner() { return Store.ok ? '' : `<div class="notice n-warn" role="alert"><b>${esc(Store.lastError)}</b><span>이 실행 환경은 브라우저 저장을 막고 있습니다. 일정은 ‘일정 복사’로 따로 보관하세요.</span></div>`; }
+function diffBadge(c) {
+  const d = Difficulty.evaluate(c);
+  if (!d.level) return { html: '<span class="badge b-warn">난이도 미확인</span>', d };
+  const cls = d.level === '상급' ? 'b-danger' : d.level === '중급' ? 'b-ribbon' : 'b-ok';
+  return { html: `<span class="badge ${cls}">${d.level}</span><span class="badge">${d.basis === 'official' ? '공식 난이도' : '앱 추정 난이도'}</span>`, d };
+}
+function sourceBadge(c) {
+  const s = c.source || {};
+  if (s.kind === 'official') return `<span class="badge b-info">공식 · ${esc(s.label)} · 확인 ${esc(s.checkedAt)}</span>`;
+  if (s.kind === 'user') return `<span class="badge">직접 입력 코스</span>`;
+  return `<span class="badge b-warn">계산 테스트용 예시</span>`;
+}
+function coordHTML(p) {
+  if (!p || !Geo.valid(p.lat, p.lng)) return '<span class="coord">좌표 없음</span>';
+  return `<span class="coord">위도 ${Fmt.dec(p.lat)} · 경도 ${Fmt.dec(p.lng)}${p.approx ? ' (근사)' : ''} · <a href="${LINKS.mapPin(p.name, p.lat, p.lng)}" target="_blank" rel="noopener">지도</a></span>`;
+}
+function routeLayers(c) {
+  const pts = c.points.filter(p => Geo.valid(p.lat, p.lng));
+  return { route: pts.map(p => [p.lat, p.lng]), points: pts.map(p => ({ lat: p.lat, lng: p.lng, label: p.name, kind: p.kind, note: p.approx ? '근사 좌표 (예시)' : '' })) };
+}
+function mapCard(id, c, title) {
+  const n = c ? c.points.filter(p => Geo.valid(p.lat, p.lng)).length : 0;
+  const th = c && trailhead(c);
+  return `<div class="card"><div class="row between"><h2>${title || '코스 지도'}</h2>${c && c.points.some(p => p.approx) ? '<span class="badge b-warn">근사 좌표 (예시)</span>' : ''}</div>
+   <div class="map" id="${id}" role="region" aria-label="코스 지도"></div><p class="map-note" id="${id}-note">${c ? (n < 2 ? '좌표가 있는 지점이 2곳 미만이라 경로선을 그리지 않았습니다. 코스 편집에서 위도·경도를 넣어 주세요.' : `좌표가 있는 지점 ${n}곳을 순서대로 이었습니다. 실제 등산로 선형이 아닌 지점 연결선입니다.`) : ''}</p>
+   ${th ? `<div class="row"><a class="btn btn-sm" href="${LINKS.mapPin(th.name, th.lat, th.lng)}" target="_blank" rel="noopener">카카오맵에서 들머리 열기</a></div>` : ''}</div>`;
+}
+
+/* ── 산·코스 선택 ── */
+function viewCourse() {
+  const c = course();
+  return `<div class="stack"><div><div class="eyebrow">산행 시간표</div><h1>어느 산에 가시나요?</h1></div>${stepsBar(0)}${storageBanner()}${apiBanner()}</div>
+  <div class="cols"><div class="stack">
+   <form id="sform" class="card" role="search"><label for="q">산 이름 검색 <span class="small muted">입력 중에는 저장된 목록을, ‘검색’을 누르면 산림청 공공데이터를 찾습니다</span></label>
+    <div class="row" style="flex-wrap:nowrap"><input id="q" type="search" inputmode="search" enterkeyhint="search" placeholder="예: 지리산, 백운산" value="${esc(state.query)}" data-bind="query" autocomplete="off"><button class="btn-primary" type="submit" style="flex:none">검색</button></div></form>
+   <div id="apires">${apiSearchBlock()}</div>
+   <div id="mlist">${mountainList()}</div>
+   <button class="btn-block" data-act="new-course" data-v="">+ 목록에 없는 산·코스 직접 추가</button></div>
+  <div class="sticky-col">${mapCard('map-course', c, c ? `${esc(c.name)} 지도` : '코스 지도')}${forestBlock()}</div></div>`;
+}
+function mountainList() {
+  const q = state.query.trim();
+  const ms = allMountains().filter(m => !q || m.name.includes(q) || (m.region || '').includes(q));
+  const counts = {}; allMountains().forEach(m => counts[m.name] = (counts[m.name] || 0) + 1);
+  let h = `<div class="stack">`;
+  if (!ms.length) h += `<div class="card"><p>‘${esc(q)}’ 검색 결과가 없습니다.</p><button class="btn-primary" data-act="new-course" data-v="${esc(q)}">목록에 없는 산·코스 직접 추가</button></div>`;
+  for (const m of ms) {
+    const cs = allCourses().filter(c => c.mountainId === m.id); const open = state.openMountain === m.id;
+    h += `<div class="card"><button class="btn-ghost btn-block" style="justify-content:space-between" data-act="open-m" data-v="${m.id}" aria-expanded="${open}">
+      <span style="text-align:left"><b style="font-size:18px">${esc(m.name)}</b> <span class="muted">· ${esc(m.region || '지역 미입력')}</span>${counts[m.name] > 1 ? ' <span class="badge b-info">같은 이름의 산</span>' : ''}</span><span class="badge">코스 ${cs.length}개</span></button>`;
+    if (open) {
+      if (!cs.length) h += `<p class="muted small">등록된 코스가 없습니다. 확인되지 않은 코스 정보는 넣지 않았습니다.</p>`;
+      h += `<div class="courses">${cs.map(courseCard).join('')}</div><button data-act="new-course" data-m="${m.id}">이 산에 코스 직접 추가</button>`;
+    }
+    h += `</div>`;
+  }
+  return h + `</div>`;
+}
+function courseCard(c) {
+  const t = CourseData.TYPES[c.type], db = diffBadge(c);
+  const km = c.segments.reduce((a, s) => a + (s.km || 0), 0), min = c.segments.reduce((a, s) => a + (s.min || 0), 0);
+  const via = c.points.slice(1, -1).map(p => p.name), sel = state.courseId === c.id;
+  return `<div class="card" style="background:var(--surface-2);border-color:${sel ? 'var(--accent)' : 'var(--line)'}">
+    <div class="row"><span class="badge b-info">${t ? t.label : '유형 미입력'}</span>${db.html}${sourceBadge(c)}</div>
+    <h3>${esc(c.name)}</h3>
+    <dl class="facts"><dt>출발</dt><dd>${esc(c.points[0]?.name)}</dd><dt>도착</dt><dd>${esc(c.points[c.points.length - 1]?.name)}</dd>
+    <dt>경유</dt><dd>${via.length ? via.map(esc).join(' → ') : '없음'}</dd>
+    <dt>총거리</dt><dd class="num">${Fmt.km(km)}</dd><dt>순수 이동</dt><dd class="num">${Fmt.dur(min)} <span class="muted small">(보통 속도)</span></dd>
+    <dt>들머리</dt><dd>${coordHTML(c.points[0])}</dd></dl>
+    <p class="small muted">${t ? esc(t.desc) + ' · ' : ''}난이도 근거: ${db.d.reasons.map(esc).join(', ')}</p>
+    <div class="row"><button class="btn-primary" style="flex:1" data-act="pick" data-v="${c.id}">${sel ? '선택됨 · 일정 설정' : '이 코스로 일정 짜기'}</button>
+    ${sel ? '' : `<button class="btn-sm" data-act="preview" data-v="${c.id}">지도</button>`}
+    ${c.builtin ? `<button class="btn-sm" data-act="edit-course" data-v="${c.id}" data-copy="1">복제해서 수정</button>` : `<button class="btn-sm" data-act="edit-course" data-v="${c.id}">수정</button><button class="btn-sm" data-act="del-course" data-v="${c.id}">삭제</button>`}</div></div>`;
+}
+/* 산림청 API 검색 결과: 산 이름을 입력값으로 산 정보·등산로 정보를 함께 조회 */
+const PROV_SHORT = { 서울특별시: '서울', 부산광역시: '부산', 대구광역시: '대구', 인천광역시: '인천', 광주광역시: '광주', 대전광역시: '대전', 울산광역시: '울산', 세종특별자치시: '세종', 경기도: '경기', 강원도: '강원', 강원특별자치도: '강원', 충청북도: '충북', 충청남도: '충남', 전라북도: '전북', 전북특별자치도: '전북', 전라남도: '전남', 경상북도: '경북', 경상남도: '경남', 제주특별자치도: '제주' };
+function regionFrom(addr) { const t = String(addr || '').split(/[\s,]+/).filter(Boolean); if (!t.length) return ''; return [PROV_SHORT[t[0]] || t[0], t[1] || ''].join(' ').trim(); }
+async function runApiSearch(q) {
+  q = q.trim(); if (!q) return;
+  state.apiSearch = { q, status: 'loading' }; paintApiSearch();
+  if (Api.base == null && !Api.netlify) { await Api.probe(state.config.apiBase); if (Api.base == null) await Api.probeNetlify(); }
+  const [fm, ft] = Api.netlify && Api.base == null ? [await Api.forestMountain(q), null] : await Promise.all([Api.forestMountain(q), Api.forestTrails(q)]);
+  if (!state.apiSearch || state.apiSearch.q !== q) return;
+  state.apiSearch = { q, status: 'done', fm, ft }; paintApiSearch();
+}
+function paintApiSearch() { const el = document.getElementById('apires'); if (el) el.innerHTML = apiSearchBlock(); }
+function unconnectedMsg(r) {
+  return { claude: 'Claude 화면 안에서는 보안 정책상 외부 API 호출이 모두 차단됩니다. 내려받은 HTML 파일(인증키 내장)이나 API 서버 배포 주소에서 검색하세요.',
+    nourl: '이 API의 요청 주소가 비어 있습니다. ‘데이터 연동’ 화면에 공공데이터포털 Swagger의 요청 주소를 넣어 주세요.',
+    service: 'API 서버에 이 데이터의 요청 주소가 아직 설정되지 않았습니다 (wrangler.toml).',
+    server: 'API 서버가 연결되지 않았습니다. 배포된 주소나 인증키가 내장된 HTML 파일에서 검색하세요.' }[r.reason] || 'API가 연결되지 않았습니다.';
+}
+function apiSearchBlock() {
+  const a = state.apiSearch; if (!a) return '';
+  const L = { unconnected: 'API 미연결', failed: '조회 실패', ok: '산림청 자료' };
+  let h = `<div class="card"><div class="row between"><h2>‘${esc(a.q)}’ ${a.ft === null ? '명산등산로' : '산림청'} 검색</h2>${a.status === 'loading' ? '<span class="badge b-info">조회 중</span>' : ''}</div>`;
+  if (a.status === 'loading') return h + '<p class="small muted">산 정보와 등산로 정보를 불러오는 중입니다.</p></div>';
+  const why = r => r.status === 'failed' ? `<p class="small">불러오지 못했습니다: ${esc(r.error)}</p>` : `<p class="small">${esc(unconnectedMsg(r))}</p>`;
+  h += `<div class="row between"><h3>${a.ft === null ? '등산로 검색 결과' : '산 정보'}</h3>${statusBadge(a.fm, L)}</div>`;
+  if (a.fm.meta) h += `<p class="small muted">resultCode <code>${esc(a.fm.meta.resultCode ?? '(없음)')}</code> · resultMsg <code>${esc(a.fm.meta.resultMsg ?? '(없음)')}</code></p>`;
+  if (a.fm.status === 'ok') {
+    const items = a.fm.data.items;
+    h += items.length ? `<p class="small">결과를 고르면 바로 <b>코스 입력 → 일정 설정 → 산행 시간표</b> 순서로 이어집니다.</p>` + items.slice(0, 10).map((it, i) => {
+      const f = apiFields(it, a.q);
+      return `<div class="ptrow"><div class="row between"><b>${esc(f.trail || f.name)}</b>${f.height ? `<span class="badge num">${esc(f.height)}m</span>` : ''}</div>
+        ${f.trail && f.trail !== f.name ? `<span class="small">${esc(f.name)}</span>` : ''}<span class="small">${esc(f.addr || '소재지 미기재')}</span>
+        ${f.km || f.min ? `<span class="small num">${f.km ? '거리 ' + esc(f.km) + 'km ' : ''}${f.min ? '· 소요 ' + esc(f.min) + '분' : ''} (원자료)</span>` : ''}
+        <details><summary class="small">원자료 보기</summary>${rawItems([it], 1)}</details>
+        <div class="grid2"><button class="btn-primary" data-act="api-course" data-v="${i}">이 등산로로 시간표 만들기</button><button data-act="pick-api" data-v="${i}">산만 목록에 추가</button></div></div>`; }).join('') + `<p class="small muted">출처 ${esc(a.fm.data.source)} · 조회 ${esc(a.fm.data.fetchedAt)}</p>` : '<p class="small">일치하는 결과가 없습니다.</p>';
+  } else h += why(a.fm);
+  if (a.ft === null) return h + `</div>`;
+  h += `<div class="row between"><h3>등산로 정보</h3>${statusBadge(a.ft, L)}</div>`;
+  if (a.ft.status === 'ok') h += rawItems(a.ft.data.items, 4) + `<p class="small muted">출처 ${esc(a.ft.data.source)} · 조회 ${esc(a.ft.data.fetchedAt)} · 필드명은 원자료 그대로</p>`;
+  else h += why(a.ft);
+  return h + `</div>`;
+}
+/* 원자료 필드명이 기관마다 달라 이름 패턴으로 추정 → 편집기에서 사용자가 확인·수정 */
+function apiFields(it, q) {
+  const num = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); return isFinite(n) && n > 0 ? n : null; };
+  const name = pickField(it, /mntn.*nm|mnt.*nm|mtn.*nm|산명|산이름|^mntnm$/i) || q;
+  const trail = pickField(it, /trl.*nm|crs.*nm|course.*nm|등산로명|코스명|trail.*nm|gdtrl.*nm/i);
+  const addr = pickField(it, /add|addr|소재|주소|loc|area|ara.*nm/i);
+  const height = pickField(it, /hght|height|높이|고도|alt/i);
+  const kmRaw = pickField(it, /len|dist|거리|km/i), minRaw = pickField(it, /time|tm$|소요|시간|dur/i);
+  let km = num(kmRaw); if (km && km > 100) km = km / 1000;            // m 단위로 보이면 km로
+  let min = num(minRaw); if (min && /시간|hour|hr/i.test(minRaw) && min < 24) min = min * 60;
+  return { name, trail, addr, height, km: km ? Math.round(km * 10) / 10 : null, min: min ? Math.round(min) : null, co: Geo.fromItem(it) };
+}
+function startEditorFromApi(i) {
+  const a = state.apiSearch; const it = a && a.fm && a.fm.data && a.fm.data.items[+i]; if (!it) return;
+  const f = apiFields(it, a.q); const blank = (name, kind) => ({ key: uid(), name, kind, lat: '', lng: '', km: '', min: '', steep: false });
+  const peak = blank(f.name, 'peak'); if (f.co) { peak.lat = String(f.co.lat); peak.lng = String(f.co.lng); }
+  // 원자료에 총거리·시간이 있으면 오르막 구간에 절반씩 미리 채움(원점회귀 가정) — 화면에서 반드시 확인
+  if (f.km) { peak.km = String(Math.round(f.km / 2 * 10) / 10); }
+  if (f.min) { peak.min = String(Math.round(f.min / 2)); }
+  const end = blank('', 'end'); end.km = peak.km; end.min = peak.min;
+  state.editor = { id: null, mName: f.name, region: regionFrom(f.addr), name: f.trail || `${f.name} 등산로`, type: 'outback', area: f.addr.split(/\s+/).slice(0, 2).join(' '),
+    rows: [blank('', 'start'), peak, end], fromApi: { item: it, source: a.fm.data.source, fetchedAt: a.fm.data.fetchedAt, km: f.km, min: f.min } };
+  go('edit');
+}
+function pickApiMountain(i) {
+  const a = state.apiSearch; const it = a && a.fm && a.fm.data.items[+i]; if (!it) return;
+  const f = apiFields(it, a.q), name = f.name, addr = f.addr;
+  const region = regionFrom(addr);
+  let m = allMountains().find(x => x.name === name && (x.region || '') === region);
+  if (!m) { m = { id: 'um-' + uid(), name, region, user: true, source: '산림청_산 정보 조회', address: addr }; state.userMountains.push(m); persist(); }
+  state.openMountain = m.id; state.query = name; state.results.forestMountain = { status: 'ok', data: { ...a.fm.data, items: [it] } }; state.results.forestTrails = a.ft;
+  forestKey = name + '|' + Api.base;
+  rerender(); toast(`${name}(${region || '지역 미기재'})을 목록에 추가했습니다. 코스는 ‘이 산에 코스 직접 추가’로 만드세요`);
+}
+function apiBanner() {
+  if (Api.base != null || Api.netlify) return '';
+  return `<div class="notice n-info"><b>공공데이터 API가 아직 연결되지 않았습니다</b><span>산림청 등산로·산 정보, 기상청 예보, 119안전센터, 재난문자는 API 서버를 배포한 뒤 표시됩니다. 지금은 예시 코스로 계산 기능을 쓸 수 있습니다.</span><button class="btn-sm" data-act="go" data-v="api" style="align-self:flex-start">연동 방법 보기</button></div>`;
+}
+function statusBadge(res, labels) {
+  const s = res ? res.status : 'loading';
+  const map = { unconnected: ['b-warn', labels.unconnected], failed: ['b-danger', labels.failed], out_of_range: ['b-warn', labels.out_of_range || ''], loading: ['b-info', '조회 중'], ok: ['b-ok', labels.ok] };
+  const [cls, l] = map[s]; return `<span class="badge ${cls}">${esc(l)}</span>`;
+}
+function rawItems(items, max = 4) {
+  if (!items || !items.length) return '<p class="small">조회 결과가 없습니다.</p>';
+  return items.slice(0, max).map(it => `<div class="raw"><dl>${Object.entries(it).filter(([, v]) => v !== '' && v != null && typeof v !== 'object').slice(0, 14).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>`).join('') + (items.length > max ? `<p class="small muted">외 ${items.length - max}건</p>` : '');
+}
+function forestBlock() {
+  const c = course(); const m = c ? mountainOf(c) : null; if (!m) return '';
+  const fm = state.results.forestMountain, ft = state.results.forestTrails;
+  const L = { unconnected: 'API 미연결', failed: '조회 실패', ok: '산림청 자료' };
+  const why = r => r && r.status === 'failed' ? `<p class="small">불러오지 못했습니다: ${esc(r.error)}</p>` : r && r.status === 'unconnected' ? `<p class="small">${esc(unconnectedMsg(r))}</p>` : '';
+  return `<div class="card"><div class="row between"><h2>산림청 공공데이터 · ${esc(m.name)}</h2>${statusBadge(fm, L)}</div>
+   <h3>산 정보</h3>${fm && fm.status === 'ok' ? rawItems(fm.data.items, 2) + `<p class="small muted">출처 ${esc(fm.data.source)} · 조회 ${esc(fm.data.fetchedAt)} · 필드명은 원자료 그대로</p>` : why(fm)}
+   ${ft === null ? '' : `<h3>등산로 정보</h3>${statusBadge(ft, L)}`}${ft && ft.status === 'ok' ? rawItems(ft.data.items, 3) + `<p class="small muted">출처 ${esc(ft.data.source)} · 조회 ${esc(ft.data.fetchedAt)}${ft.data.items.some(i => Geo.fromItem(i)) ? ' · 좌표가 있는 항목은 지도에 하늘색 점으로 표시' : ''}</p>` : why(ft)}
+   </div>`;
+}
+
+/* ── 코스 편집기 ── */
+function startEditor(c, copy, mountainId, presetName) {
+  const row = (p, i, segs) => ({ key: uid(), pid: copy ? null : p.id, name: p.name, kind: p.kind, lat: Geo.valid(p.lat, p.lng) ? String(p.lat) : '', lng: Geo.valid(p.lat, p.lng) ? String(p.lng) : '', approx: !!p.approx,
+    km: i ? String(segs[i - 1].km ?? '') : '', min: i ? String(segs[i - 1].min ?? '') : '', steep: i ? !!segs[i - 1].steep : false });
+  if (c) {
+    const m = mountainOf(c);
+    state.editor = { id: copy ? null : c.id, mName: m.name, region: m.region || '', name: copy ? c.name + ' (수정본)' : c.name, type: c.type, area: c.area || '', rows: c.points.map((p, i) => row(p, i, c.segments)) };
+  } else {
+    const m = mountainId ? allMountains().find(x => x.id === mountainId) : null;
+    const blank = kind => ({ key: uid(), name: '', kind, lat: '', lng: '', km: '', min: '', steep: false });
+    state.editor = { id: null, mName: m ? m.name : (presetName || ''), region: m ? m.region || '' : '', name: '', type: 'outback', area: '', rows: [blank('start'), blank('peak'), blank('end')] };
+  }
+  go('edit');
+}
+function viewEditor() {
+  const e = state.editor; if (!e) return '<div class="card">편집할 코스가 없습니다.</div>';
+  let h = `<div><div class="eyebrow">${e.id ? '코스 수정' : '코스 직접 추가'}</div><h1>${esc(e.name || '새 코스')}</h1></div>
+  <div class="cols"><div class="stack"><div class="card"><div class="grid2"><label for="e-m">산 이름<input id="e-m" data-ebind="mName" value="${esc(e.mName)}" placeholder="예: 백운산"></label>
+  <label for="e-r">지역(같은 이름 구분)<input id="e-r" data-ebind="region" value="${esc(e.region)}" placeholder="예: 경기 포천"></label></div>
+  <label for="e-n">코스 이름<input id="e-n" data-ebind="name" value="${esc(e.name)}" placeholder="예: 흥룡사 원점회귀"></label>
+  <div class="grid2"><label for="e-t">코스 유형<select id="e-t" data-ebind="type">${Object.entries(CourseData.TYPES).map(([k, v]) => `<option value="${k}" ${e.type === k ? 'selected' : ''}>${v.label} — ${v.desc}</option>`).join('')}</select></label>
+  <label for="e-a">들머리 시·군 (센터·재난 조회용)<input id="e-a" data-ebind="area" value="${esc(e.area)}" placeholder="예: 경기 포천시"></label></div></div>
+  ${e.fromApi ? `<div class="card" style="border-color:var(--accent)"><div class="row between"><h2>산림청 검색 결과에서 가져옴</h2><span class="badge b-info">확인 필요</span></div>
+   <p class="small">산 이름·지역${e.fromApi.km || e.fromApi.min ? '과 원자료의 거리·시간' : ''}을 미리 채웠습니다. ${e.fromApi.km || e.fromApi.min ? `원자료의 총 ${e.fromApi.km ? e.fromApi.km + 'km' : ''} ${e.fromApi.min ? e.fromApi.min + '분' : ''}을 오르막·내리막에 절반씩 나눠 넣었으니 실제 코스에 맞게 고치세요.` : '원자료에 구간 거리·시간이 없어 비워 두었습니다.'} 들머리·하산 지점 이름과 구간 거리·이동시간을 넣고 ‘저장하고 일정 설정’을 누르세요.</p>
+   <details><summary class="small">원자료 보기</summary>${rawItems([e.fromApi.item], 1)}<p class="small muted">출처 ${esc(e.fromApi.source)} · 조회 ${esc(e.fromApi.fetchedAt)}</p></details></div>` : ''}
+  <h2>지점과 구간</h2><p class="small muted">첫 지점은 들머리, 마지막 지점은 하산 지점입니다. 각 지점에 ‘이전 지점에서’ 거리와 보통 걸음 기준 이동시간을 넣으세요. 위도·경도는 선택 항목이며 넣으면 지도·일몰·인근 센터 계산에 쓰입니다. ↑↓로 순서를 바꾸면 그 지점의 구간 정보가 함께 움직입니다.</p><div class="stack">`;
+  e.rows.forEach((r, i) => {
+    h += `<div class="ptrow"><div class="row between"><b>지점 ${i + 1}${i === 0 ? ' · 들머리' : i === e.rows.length - 1 ? ' · 하산 지점' : ''}</b>
+      <div class="ord"><button aria-label="위로" data-act="row-up" data-v="${i}" ${i === 0 ? 'disabled' : ''}>↑</button><button aria-label="아래로" data-act="row-down" data-v="${i}" ${i === e.rows.length - 1 ? 'disabled' : ''}>↓</button><button aria-label="삭제" data-act="row-del" data-v="${i}" ${e.rows.length <= 2 ? 'disabled' : ''}>✕</button></div></div>
+      <div class="grid2"><label for="rn-${r.key}">지점 이름<input id="rn-${r.key}" data-rbind="name" data-i="${i}" value="${esc(r.name)}" placeholder="예: 정상"></label>
+      <label for="rk-${r.key}">종류<select id="rk-${r.key}" data-rbind="kind" data-i="${i}">${Object.entries(CourseData.KINDS).map(([k, v]) => `<option value="${k}" ${r.kind === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label></div>
+      <div class="grid2"><label for="rla-${r.key}">위도 (선택)<input id="rla-${r.key}" type="number" inputmode="decimal" step="0.00001" data-rbind="lat" data-i="${i}" value="${esc(r.lat)}" placeholder="예: 35.33690"></label>
+      <label for="rlo-${r.key}">경도 (선택)<input id="rlo-${r.key}" type="number" inputmode="decimal" step="0.00001" data-rbind="lng" data-i="${i}" value="${esc(r.lng)}" placeholder="예: 127.73060"></label></div>
+      ${i > 0 ? `<div class="grid2"><label for="rd-${r.key}">이전 지점에서 거리(km)<input id="rd-${r.key}" type="number" inputmode="decimal" step="0.1" min="0" data-rbind="km" data-i="${i}" value="${esc(r.km)}"></label>
+      <label for="rm-${r.key}">기본 이동시간(분)<input id="rm-${r.key}" type="number" inputmode="numeric" min="0" data-rbind="min" data-i="${i}" value="${esc(r.min)}"></label></div>
+      <label style="flex-direction:row;align-items:center;gap:10px;font-weight:500" for="rs-${r.key}"><input id="rs-${r.key}" type="checkbox" style="width:24px;min-height:24px" data-rbind="steep" data-i="${i}" ${r.steep ? 'checked' : ''}>이 구간에 급경사가 있음</label>` : ''}</div>
+      <button class="btn-sm" data-act="row-add" data-v="${i + 1}">+ 여기 다음에 지점 추가</button>`;
+  });
+  h += `</div><div id="e-err"></div><div class="row"><button class="btn-primary" style="flex:1" data-act="save-course">${e.fromApi ? '저장하고 일정 설정' : '코스 저장'}</button><button data-act="back">취소</button></div></div>
+  <div class="sticky-col"><div class="card"><h2>입력한 좌표 미리 보기</h2><div class="map" id="map-edit"></div><p class="map-note" id="map-edit-note">위도·경도를 입력하고 ‘지도 새로 그리기’를 누르세요.</p><button data-act="redraw-edit">지도 새로 그리기</button></div></div></div>`;
+  return h;
+}
+function editorAsCourse() {
+  const e = state.editor;
+  return { points: e.rows.map((r, i) => ({ id: r.key, name: r.name || `지점 ${i + 1}`, kind: r.kind, lat: parseFloat(r.lat), lng: parseFloat(r.lng), approx: r.approx })), segments: [] };
+}
+function saveCourse() {
+  const e = state.editor; const errs = [];
+  if (!e.mName.trim()) errs.push('산 이름을 입력하세요');
+  if (!e.name.trim()) errs.push('코스 이름을 입력하세요');
+  if (e.rows.some(r => !r.name.trim())) errs.push('모든 지점 이름을 입력하세요');
+  if (e.rows.slice(1).some(r => r.km === '' || r.min === '')) errs.push('모든 구간의 거리와 이동시간을 입력해야 시간표를 계산할 수 있습니다');
+  e.rows.forEach((r, i) => { if ((r.lat !== '' || r.lng !== '') && !Geo.valid(parseFloat(r.lat), parseFloat(r.lng))) errs.push(`지점 ${i + 1}의 위도·경도가 국내 범위(위도 32~39.5, 경도 123~132.5)를 벗어났거나 하나만 입력됐습니다`); });
+  if (errs.length) { document.getElementById('e-err').innerHTML = `<div class="notice n-danger" role="alert">${errs.map(esc).join('<br>')}</div>`; return; }
+  let m = allMountains().find(x => x.name === e.mName.trim() && (x.region || '') === e.region.trim());
+  if (!m) { m = { id: 'um-' + uid(), name: e.mName.trim(), region: e.region.trim(), user: true }; state.userMountains.push(m); }
+  const points = e.rows.map((r, i) => {
+    const lat = parseFloat(r.lat), lng = parseFloat(r.lng), ok = Geo.valid(lat, lng);
+    return { id: r.pid || 'p-' + uid(), name: r.name.trim(), kind: i === 0 ? 'start' : i === e.rows.length - 1 ? 'end' : (r.kind === 'start' || r.kind === 'end' ? 'waypoint' : r.kind), lat: ok ? lat : null, lng: ok ? lng : null, approx: ok && !!r.approx };
+  });
+  const segments = e.rows.slice(1).map(r => ({ km: Number(r.km), min: Number(r.min), steep: !!r.steep }));
+  const c = { id: e.id || 'uc-' + uid(), mountainId: m.id, name: e.name.trim(), type: e.type, area: e.area.trim(), points, segments, source: { kind: 'user' }, officialDifficulty: null, defaults: { startTime: '07:00', rests: {} } };
+  const idx = state.userCourses.findIndex(x => x.id === c.id);
+  if (idx >= 0) state.userCourses[idx] = c; else state.userCourses.push(c);
+  state.openMountain = m.id;
+  const ok = persist();
+  state.courseId = c.id; state.plan = newPlan(c); state.planId = null; state.results = {};
+  const fromApi = !!e.fromApi;
+  if (fromApi) c.source = { kind: 'user', note: '산림청 검색 결과 기반 · 사용자 확인' };
+  state.editor = null; nav.stack = fromApi ? ['course', 'plan'] : ['course']; show(fromApi ? 'plan' : 'course');
+  try { history.replaceState({ v: state.tab }, '', '#' + state.tab); } catch (er) { }
+  toast(ok ? '코스를 기기에 저장했습니다' : '코스는 추가됐지만 기기 저장에 실패했습니다');
+}
+function pick(id) {
+  if (state.courseId !== id || !state.plan) { state.courseId = id; state.plan = newPlan(course(id)); state.planId = null; state.results = {}; }
+  go('plan');
+}
+
+/* ── 일정 설정 ── */
+function viewPlan() {
+  const c = course(); if (!c) return `<div class="card">코스를 먼저 선택하세요.</div>`;
+  const p = state.plan, m = mountainOf(c);
+  let h = `<div class="stack"><div><div class="eyebrow">${esc(m.name)} · ${esc(m.region)}</div><h1>${esc(c.name)}</h1></div>${stepsBar(1)}${storageBanner()}</div>
+  <div class="cols"><div class="stack">
+  <div class="card"><h2>날짜와 출발</h2><div class="grid2">
+   <label for="p-date">산행 날짜<input id="p-date" type="date" data-pbind="date" value="${esc(p.date)}"></label>
+   <label for="p-start">등산로 출발 시각 (들머리)<input id="p-start" type="time" data-pbind="startTime" value="${esc(p.startTime)}"></label></div>
+   <details ${p.homeDepart || p.driveMin ? 'open' : ''}><summary>집 출발·차량 이동 (선택)</summary><div class="grid2">
+    <label for="p-home">집 출발 시각<input id="p-home" type="time" data-pbind="homeDepart" value="${esc(p.homeDepart)}"></label>
+    <label for="p-drive">차량 이동(분)<input id="p-drive" type="number" inputmode="numeric" min="0" data-pbind="driveMin" value="${esc(p.driveMin)}"></label></div></details></div>
+  <div class="card"><h2>걸음 속도</h2><div class="seg" role="group" aria-label="걸음 속도">${Object.entries(Schedule.SPEEDS).map(([k, v]) => `<button data-act="speed" data-v="${k}" aria-pressed="${p.speed === k}">${v.label}<small>×${v.mult.toFixed(2)}</small></button>`).join('')}</div>
+   <p class="small muted">배율은 구간 이동시간에만 곱합니다. 휴식·식사시간은 입력한 분 그대로 더합니다.</p></div>
+  <div class="card"><h2>휴식·식사</h2><p class="small muted">원하는 지점에 휴식이나 식사를 넣으세요. 바꾸면 이후 일정이 바로 다시 계산됩니다.</p>${c.points.slice(0, -1).map(restEditor).join('')}</div>
+  <div class="card"><h2>하산 목표와 제한</h2>
+   <label for="p-target">하산 목표 시각 (선택)<input id="p-target" type="time" data-pbind="targetEnd" value="${esc(p.targetEnd)}"></label>
+   <details ${p.limit.time ? 'open' : ''}><summary>입산 제한 시각 (공식 확인 시 입력)</summary><div class="stack">
+    <div class="grid2"><label for="l-time">제한 시각<input id="l-time" type="time" data-lbind="time" value="${esc(p.limit.time)}"></label>
+    <label for="l-pt">적용 지점<select id="l-pt" data-lbind="pointId"><option value="">선택</option>${c.points.slice(0, -1).map(pt => `<option value="${pt.id}" ${p.limit.pointId === pt.id ? 'selected' : ''}>${esc(pt.name)}</option>`).join('')}</select></label></div>
+    <label for="l-src">확인한 출처<input id="l-src" data-lbind="source" value="${esc(p.limit.source)}" placeholder="예: 국립공원공단 공지 11/10 확인"></label>
+    <a class="btn btn-sm" href="${LINKS.knps}" target="_blank" rel="noopener">국립공원공단 공식 안내 열기</a></div></details></div>
+  <button class="btn-primary btn-block" data-act="go" data-v="table" style="min-height:56px;font-size:18px">산행 시간표 보기</button></div>
+  <div class="sticky-col">${planPreview(c, p)}${mapCard('map-plan', c)}</div></div>`;
+  return h;
+}
+function planPreview(c, p) {
+  const s = Schedule.compute(c, p); if (!s) return '';
+  return `<div class="card" id="plan-preview"><div class="eyebrow">미리 보기 · 즉시 계산</div><div class="stats" style="grid-template-columns:1fr 1fr">
+   <div class="stat hero"><div><div class="k">예상 하산 시각</div><div class="v">${Fmt.clock(s.summary.end)}${Fmt.dayTag(s.summary.end) ? ` <small>(${Fmt.dayTag(s.summary.end)})</small>` : ''}</div></div></div>
+   <div class="stat"><div class="k">순수 이동</div><div class="v">${Fmt.dur(s.summary.moveMin)}</div></div><div class="stat"><div class="k">총 휴식</div><div class="v">${Fmt.dur(s.summary.restMin)}</div></div></div></div>`;
+}
+function restEditor(pt) {
+  const r = state.plan.rests[pt.id];
+  if (!r) return `<div class="row between"><span>${esc(pt.name)} <span class="muted small">${CourseData.KINDS[pt.kind] || ''}</span></span><button class="btn-sm" data-act="rest-add" data-v="${pt.id}">+ 휴식</button></div>`;
+  return `<div class="ptrow"><div class="row between"><b>${esc(pt.name)}</b><button class="btn-sm btn-ghost" data-act="rest-del" data-v="${pt.id}">빼기</button></div>
+   <div class="row between"><div class="seg" style="grid-template-columns:1fr 1fr;flex:1;min-width:140px">${[['rest', '휴식'], ['meal', '식사']].map(([k, l]) => `<button class="btn-sm" data-act="rest-kind" data-v="${pt.id}" data-k="${k}" aria-pressed="${r.kind === k}">${l}</button>`).join('')}</div>${stepper(pt.id, r.min)}</div></div>`;
+}
+function stepper(pid, min) {
+  return `<div class="stepper"><button aria-label="5분 줄이기" data-act="rest-step" data-v="${pid}" data-d="-5">−5</button><input id="rmin-${pid}" type="number" inputmode="numeric" min="0" aria-label="휴식 분" data-restmin="${pid}" value="${min}"><span class="small">분</span><button aria-label="5분 늘리기" data-act="rest-step" data-v="${pid}" data-d="5">+5</button></div>`;
+}
+
+/* ── 산행 시간표 ── */
+function viewTable() {
+  const c = course(); if (!c) return `<div class="card">코스를 먼저 선택하세요.</div>`;
+  const p = state.plan, m = mountainOf(c), s = Schedule.compute(c, p);
+  if (!s) return `<div class="card">등산로 출발 시각을 입력하세요.</div>`;
+  const S = s.summary, sp = Schedule.SPEEDS[p.speed];
+  let left = `<div class="card"><div class="stats">
+   <div class="stat hero"><div><div class="k">예상 하산 시각</div><div class="v">${Fmt.clock(S.end)}${Fmt.dayTag(S.end) ? ` <small>(${Fmt.dayTag(S.end)})</small>` : ''}</div></div><div class="small">등산로 출발 ${Fmt.clock(S.start)} · 걸음 ${sp.label} ×${sp.mult.toFixed(2)}</div></div>
+   <div class="stat"><div class="k">총거리</div><div class="v">${Fmt.km(S.km)}</div></div>
+   <div class="stat"><div class="k">순수 이동시간</div><div class="v">${Fmt.dur(S.moveMin)}</div></div>
+   <div class="stat"><div class="k">총 휴식시간</div><div class="v">${Fmt.dur(S.restMin)}</div></div>
+   <div class="stat"><div class="k">등산로 출발</div><div class="v">${Fmt.clock(S.start)}</div></div></div>
+   <div class="row">${sourceBadge(c)}<span class="small muted">모든 시각은 한국 시간</span></div>`;
+  if (S.access) left += `<div class="notice ${S.access.slackMin < 0 ? 'n-warn' : 'n-info'}">집 출발 ${Fmt.time(S.access.home)} → 들머리 도착 예정 ${Fmt.time(S.access.arrive)} (차량 ${p.driveMin}분)${S.access.slackMin < 0 ? `<b>등산로 출발 시각보다 ${-S.access.slackMin}분 늦게 도착합니다.</b>` : `<span>등산로 출발까지 ${S.access.slackMin}분 여유</span>`}</div>`;
+  if (S.target) left += `<div class="notice ${S.target.diffMin < 0 ? 'n-danger' : 'n-info'}"><b>하산 목표 ${Fmt.time(S.target.target)} 대비 ${S.target.diffMin < 0 ? Fmt.dur(-S.target.diffMin) + ' 초과' : Fmt.dur(S.target.diffMin) + ' 여유'}</b></div>`;
+  left += limitsBlock(c, p, s) + `</div><h2>경유지별 시간표</h2><div class="tl">`;
+  s.rows.forEach((r, i) => {
+    const last = i === s.rows.length - 1;
+    left += `<div class="tl-pt ${r.point.kind === 'peak' ? 'peak' : ''} ${last ? 'end' : ''}"><div class="row between"><h3>${esc(r.point.name)}</h3><span class="badge">${CourseData.KINDS[r.point.kind] || ''}</span></div>
+      <div class="tl-times"><div><div class="k">${i === 0 ? '출발 지점' : '도착'}</div><div class="v">${Fmt.clock(r.arrive)}</div></div>
+      ${!last ? `<div><div class="k">${r.restKind === 'meal' ? '식사' : '휴식'}</div><div class="v">${r.restMin}분</div></div><div><div class="k">${i === 0 ? '출발' : '재출발'}</div><div class="v">${Fmt.clock(r.depart)}</div></div>` : `<div><div class="k">하산 완료</div><div class="v">${Fmt.clock(r.arrive)}</div></div>`}</div>
+      ${Fmt.dayTag(r.arrive) ? `<span class="badge b-warn">${Fmt.dayTag(r.arrive)}</span>` : ''}
+      <div class="mt">${coordHTML(r.point)}</div>
+      ${!last ? `<div class="row mt"><span class="small muted">휴식 조정</span>${stepper(r.point.id, r.restMin)}</div>` : ''}</div>`;
+    if (r.next) left += `<div class="tl-seg">↓ ${esc(r.next.to)}까지 <b class="num">${Fmt.km(r.next.km)}</b> · <b class="num">${r.next.min}분</b> <span class="small">(기본 ${r.next.baseMin}분 ×${S.mult.toFixed(2)})</span>${r.next.steep ? ' <span class="badge b-ribbon">급경사</span>' : ''}</div>`;
+  });
+  left += `</div>`;
+  const txt = scheduleText(c, m, p, s);
+  const right = `${mapCard('map-table', c)}${weatherBlock(c, p, s)}${trailBlock(c)}
+   <div class="card"><h2>저장·공유</h2><div class="grid2"><button class="btn-primary" data-act="save-plan">일정 저장</button><button class="btn-primary" data-act="copy-plan">일정 복사</button></div>
+   <p class="small muted">일정 공유·저장에는 긴급 신고 좌표와 사고 내용이 들어가지 않습니다.</p>
+   ${state.copyFallback && state.copyFallback.key === 'plan' ? `<div class="notice n-warn">자동 복사가 지원되지 않습니다. 아래 글을 길게 눌러 전체 선택 후 복사하세요.</div><textarea id="fb-plan" readonly rows="10">${esc(txt)}</textarea>` : `<details><summary>복사될 내용 미리 보기</summary><pre class="prebox">${esc(txt)}</pre></details>`}</div>`;
+  return `<div class="stack"><div><div class="eyebrow">${esc(Fmt.date(p.date))}</div><h1>${esc(m.name)} ${esc(c.name)}</h1></div>${stepsBar(2)}${storageBanner()}</div>
+   <div class="cols"><div class="stack">${left}</div><div class="sticky-col">${right}</div></div>`;
+}
+function limitsBlock(c, p, s) {
+  let h = ''; const th = trailhead(c);
+  if (th) {
+    const ss = Sun.sunsetKST(p.date, th.lat, th.lng);
+    if (ss != null) {
+      const gap = ss - s.summary.end;
+      h += `<div class="notice ${gap < 30 ? 'n-warn' : 'n-info'}"><b>일몰 ${Fmt.clock(ss)} (천문 계산 추정값)${gap < 0 ? ` · 하산이 일몰보다 ${-gap}분 늦음` : ` · 하산 후 ${gap}분`}</b>
+       <span class="small">적용: ${esc(Fmt.date(p.date))} · ${esc(th.name)} ${th.approx ? '근사 ' : ''}좌표 (${Fmt.dec(th.lat, 4)}, ${Fmt.dec(th.lng, 4)}). 공식 발표값이 아니며 산그림자로 계곡은 더 일찍 어두워집니다.</span>
+       <a class="btn btn-sm" href="${LINKS.kasi}" target="_blank" rel="noopener" style="align-self:flex-start">한국천문연구원 출몰시각 확인</a></div>`;
+    }
+  } else h += `<div class="notice n-info small">들머리 좌표가 없어 일몰 시각을 계산하지 않았습니다.</div>`;
+  if (p.limit.time && p.limit.pointId) {
+    const row = s.rows.find(r => r.point.id === p.limit.pointId), lim = Fmt.toMin(p.limit.time);
+    if (row && lim != null) {
+      const over = row.depart > lim;
+      h += `<div class="notice ${over ? 'n-danger' : 'n-info'}"><b>입산 제한 ${p.limit.time} · ${esc(row.point.name)} 기준${over ? ` · 예정 출발 ${Fmt.clock(row.depart)}로 ${row.depart - lim}분 늦음` : ` · 예정 출발 ${Fmt.clock(row.depart)}`}</b>
+       <span class="small">적용 날짜 ${esc(Fmt.date(p.date))} · 출처: ${esc(p.limit.source || '사용자 입력(출처 미기재)')}</span></div>`;
+    }
+  } else h += `<p class="small muted">입산 제한 시각: 미확인 (일정 설정에서 공식 확인 값을 입력할 수 있습니다)</p>`;
+  return h;
+}
+function weatherBlock(c, p, s) {
+  const peakRow = s.rows.find(r => r.point.kind === 'peak');
+  const res = state.results.weather;
+  const lab = { unconnected: '예보 미연결', out_of_range: '예보 제공 기간 밖', failed: '예보 조회 실패', ok: '기상청 단기예보' };
+  let h = `<div class="card"><div class="row between"><h2>시간대별 날씨</h2>${statusBadge(res, lab)}</div>
+   <dl class="facts"><dt>들머리</dt><dd>${esc(c.points[0].name)} · ${Fmt.clock(s.summary.start)}~${Fmt.clock(s.summary.end)}</dd><dt>정상 부근</dt><dd>${peakRow ? `${esc(peakRow.point.name)} · ${Fmt.clock(peakRow.arrive)} 전후` : '정상 지점 없음'}</dd></dl>`;
+  if (res && res.status === 'ok') {
+    h += `<p class="small muted">발표 ${esc(res.data.issuedAt)} · 출처 기상청 단기예보(공공데이터포털)</p>`;
+    res.data.points.forEach(pt => {
+      h += `<h3>${esc(pt.role)}</h3><p class="small muted">예보 지점: ${esc(pt.stationName)}</p>${pt.hourly && pt.hourly.length ? `<div class="wxtable"><table><thead><tr><th>시각</th><th>기온</th><th>강수확률</th><th>풍속</th></tr></thead><tbody>${pt.hourly.map(x => `<tr><td class="num">${esc(x.time)}</td><td class="num">${esc(x.temp)}℃</td><td class="num">${esc(x.pop)}%</td><td class="num">${esc(x.wind)}m/s</td></tr>`).join('')}</tbody></table></div>` : '<p class="small">해당 시간대 예보가 응답에 없습니다.</p>'}`;
+    });
+  } else if (res) {
+    const why = { unconnected: res.reason === 'service' ? 'API 서버에 기상청 단기예보 키가 설정되지 않았습니다.' : '예보 API가 연결되지 않아 기온·강수확률·풍속을 표시하지 않습니다.', out_of_range: `선택한 날짜가 시간별 단기예보 범위(오늘부터 ${Api.WEATHER_DAYS}일) 밖입니다.`, failed: '예보를 불러오지 못했습니다. 날씨가 좋다는 뜻이 아닙니다.' + (res.error ? ` (${esc(res.error)})` : '') }[res.status];
+    h += `<p class="small">${why}</p>`;
+  }
+  return h + `<a class="btn btn-block" href="${LINKS.kma}" target="_blank" rel="noopener">기상청 날씨누리 공식 안내 열기</a></div>`;
+}
+function trailBlock(c) {
+  return `<div class="card"><div class="row between"><h2>탐방로 상태</h2><span class="badge b-warn">통제 여부 미확인</span></div>
+   <p class="small">탐방로 개방·통제 공식 API는 아직 연결 대상이 없습니다. 산불조심기간 등 정기 통제가 있을 수 있으니 출발 전에 확인하세요.</p>
+   <a class="btn btn-block" href="${LINKS.knps}" target="_blank" rel="noopener">국립공원공단 공식 안내 열기</a>
+   <p class="small muted">코스 자료: ${c.source.kind === 'example' ? `계산 테스트용 예시 (공식 자료 아님) · 작성 ${esc(c.source.checkedAt)}` : c.source.kind === 'user' ? '사용자가 직접 입력' : `${esc(c.source.label)} · 확인 ${esc(c.source.checkedAt)}`}</p></div>`;
+}
+function scheduleText(c, m, p, s) {
+  const S = s.summary, L = [];
+  L.push(`[산행 시간표] ${Fmt.date(p.date)}`, `${m.name}(${m.region}) · ${c.name}`);
+  if (S.access) L.push(`집 출발 ${Fmt.time(S.access.home)} → 들머리 도착 ${Fmt.time(S.access.arrive)}`);
+  L.push(`등산로 출발 ${Fmt.time(S.start)} · 걸음 ${Schedule.SPEEDS[p.speed].label}(×${S.mult.toFixed(2)})`, '');
+  s.rows.forEach((r, i) => {
+    if (i === 0) L.push(`· ${r.point.name} 출발 ${Fmt.time(r.depart)}${r.restMin ? ` (준비 ${r.restMin}분)` : ''}`);
+    else if (r.depart == null) L.push(`· ${r.point.name} 도착 ${Fmt.time(r.arrive)} (하산)`);
+    else L.push(`· ${r.point.name} 도착 ${Fmt.time(r.arrive)}${r.restMin ? ` / ${r.restKind === 'meal' ? '식사' : '휴식'} ${r.restMin}분 / 재출발 ${Fmt.time(r.depart)}` : ''}`);
+  });
+  L.push('', `총 ${Fmt.km(S.km)} · 이동 ${Fmt.dur(S.moveMin)} · 휴식 ${Fmt.dur(S.restMin)}`, `예상 하산 ${Fmt.time(S.end)} (한국 시간)`);
+  if (c.source.kind === 'example') L.push('※ 구간 거리·시간은 계산 테스트용 예시');
+  return L.join('\n');
+}
+
+/* ── 저장한 일정 ── */
+function viewSaved() {
+  let h = `<div><div class="eyebrow">이 기기에 저장</div><h1>저장한 일정</h1></div>${storageBanner()}<div class="cols"><div class="stack">`;
+  if (!state.saved.length) h += `<div class="card"><p>저장한 일정이 없습니다.</p><p class="small muted">시간표 화면에서 ‘일정 저장’을 누르면 여기에 모입니다. 로그인 없이 이 기기 브라우저에만 저장됩니다.</p></div>`;
+  [...state.saved].sort((a, b) => b.savedAt.localeCompare(a.savedAt)).forEach(sv => {
+    const c = course(sv.courseId);
+    h += `<div class="card"><div class="eyebrow">${esc(Fmt.date(sv.plan.date))} · 출발 ${esc(sv.plan.startTime)}</div><h3>${c ? esc(mountainOf(c).name + ' ' + c.name) : '삭제된 코스'}</h3><p class="small muted">저장 ${esc(sv.savedAt)}</p>
+     <div class="row"><button class="btn-primary" style="flex:1" data-act="open-plan" data-v="${sv.id}" ${c ? '' : 'disabled'}>열어서 수정</button><button class="btn-sm" data-act="del-plan" data-v="${sv.id}">삭제</button></div></div>`;
+  });
+  h += `</div><div class="stack"><h2>직접 추가한 코스</h2>`;
+  if (!state.userCourses.length) h += `<p class="small muted">아직 없습니다.</p>`;
+  state.userCourses.forEach(c => { h += `<div class="card"><h3>${esc(mountainOf(c).name)} · ${esc(c.name)}</h3><div class="row"><button class="btn-sm" data-act="pick" data-v="${c.id}">일정 짜기</button><button class="btn-sm" data-act="edit-course" data-v="${c.id}">수정</button><button class="btn-sm" data-act="del-course" data-v="${c.id}">삭제</button></div></div>`; });
+  return h + `<button class="btn-block" data-act="go" data-v="api">데이터 연동 (API) 설정</button></div></div>`;
+}
+
+/* ── 데이터 연동 ── */
+function viewApi() {
+  const S = Api.services, on = k => Api.base != null && S[k];
+  const rows = [
+    ['weather', '기상청_단기예보 조회서비스', '들머리·정상 시간대별 기온·강수확률·풍속'],
+    ['forestMountain', '산림청_산 정보 조회_GW', '산 이름·높이·소재지 (data.go.kr/data/15158978)'],
+    ['forestTrail', '산림청_산림공간정보_등산로정보_GW', '등산로 경로·거리·소요시간·난이도·편의시설 (data.go.kr/data/15158970)'],
+    ['centers', '소방청_119안전센터 현황', '센터명·주소·전화번호 (data.go.kr/data/15065056, 좌표 없음)'],
+    ['disaster', '행정안전부_긴급재난문자', '지역별 재난문자 (data.go.kr/data/15134001)']
+  ];
+  return `<div><div class="eyebrow">공공데이터포털 연동</div><h1>API 발급과 적용</h1></div>
+  <div class="cols"><div class="stack">
+   <div class="card"><div class="row between"><h2>현재 연결 상태</h2>${Api.base != null ? '<span class="badge b-ok">API 서버 연결됨</span>' : '<span class="badge b-warn">API 서버 미연결</span>'}</div>
+    <p class="small muted">확인 ${esc(Api.checkedAt || '-')}${Api.base != null ? ` · 서버 ${esc(Api.base || '(같은 주소)')}` : ''}</p>
+    ${rows.map(([k, n, d]) => `<div class="row between" style="border-top:1px solid var(--line);padding-top:8px"><div style="min-width:0;flex:1"><b>${n}</b><p class="small muted">${d}</p></div>${on(k) ? '<span class="badge b-ok">연결</span>' : '<span class="badge b-warn">미연결</span>'}</div>`).join('')}
+    <label for="cfg-base">API 서버 주소 (앱과 다른 주소에 배포한 경우만)<input id="cfg-base" type="url" inputmode="url" value="${esc(state.config.apiBase)}" placeholder="비워 두면 이 앱과 같은 주소의 /api 사용"></label>
+    <h3>인증키 내장 모드 (서버 없이 단독 HTML에서)</h3>
+    <p class="small muted">${ENV.inClaude ? 'Claude 화면에서는 사용할 수 없습니다. 내려받은 HTML 파일에서 쓰세요.' : DIRECT_KEY ? '이 파일에는 인증키가 내장되어 있습니다. 서버가 없으면 브라우저에서 직접 호출을 시도합니다(공공데이터포털이 브라우저 호출을 막으면 서버 배포가 필요).' : '이 파일에는 인증키가 없습니다. API 서버를 이용합니다.'}</p>
+    ${[['mountainUrl', '산 정보 요청 주소'], ['mountainParam', '산 이름 파라미터'], ['trailUrl', '등산로 정보 요청 주소'], ['trailParam', '등산로 산 이름 파라미터']].map(([k, l]) => `<label for="dc-${k}">${l}<input id="dc-${k}" data-dcfg="${k}" value="${esc((state.config.direct || {})[k] ?? DIRECT_DEFAULTS[k])}" placeholder="Swagger에서 복사"></label>`).join('')}
+    <button class="btn-primary" data-act="save-cfg">저장하고 다시 연결 확인</button>
+    <p class="small muted">이 화면에는 인증키를 입력하지 않습니다. 인증키는 서버 비밀값으로만 보관합니다.</p></div>
+  </div><div class="stack">
+   <div class="card"><h2>1. 인증키 발급 (공공데이터포털)</h2><ol class="guide">
+    <li><a href="${LINKS.datagokr}" target="_blank" rel="noopener">data.go.kr</a> 회원가입·로그인</li>
+    <li>아래 오픈API를 각각 검색해 <b>[활용신청]</b> (활용 목적 ‘웹/앱 개발’, 상세 기능 전체 선택)<br><span class="small">기상청_단기예보 조회서비스 · 산림청_산 정보 조회_GW · 산림청_산림공간정보_등산로정보_GW · 행정안전부_긴급재난문자 · 소방청_119안전센터 현황(오픈API 탭)</span></li>
+    <li>마이페이지 › 데이터활용 › 오픈API › 활용신청 현황에서 <b>일반 인증키(Decoding)</b> 복사</li>
+    <li>승인 직후에는 ‘SERVICE_KEY_IS_NOT_REGISTERED’ 오류가 날 수 있으니 1~2시간 뒤 확인</li>
+    <li>각 API 상세의 Swagger(활용명세)에서 <b>요청 주소(오퍼레이션 URL)</b>를 복사해 둡니다</li></ol></div>
+   <div class="card"><h2>2. API 서버 배포 (키 보관)</h2><ol class="guide">
+    <li>함께 드린 <code>sanhaeng-app</code> 폴더에서 <code>npx wrangler deploy</code> (Cloudflare Workers 무료 요금제)</li>
+    <li><code>npx wrangler secret put DATA_GO_KR_KEY</code> 로 인증키 등록</li>
+    <li><code>wrangler.toml</code>의 <code>FOREST_MOUNTAIN_URL</code> 등에 Swagger 요청 주소 입력 후 다시 배포</li>
+    <li>배포 주소를 열면 이 화면 상단이 ‘API 서버 연결됨’으로 바뀝니다</li></ol>
+    <p class="small muted">Claude 미리보기 안에서는 외부 서버 호출이 차단되어 항상 ‘미연결’로 보입니다. 배포 주소에서 확인하세요.</p></div>
+  </div></div>`;
+}
+
+/* ── 긴급 도움 ── */
+function viewSOS() {
+  const c = course(), m = c ? mountainOf(c) : null, g = state.sos.geo;
+  const sched = c ? Schedule.compute(c, state.plan) : null;
+  const exp = sched ? Schedule.expectedAt(sched, state.plan, Fmt.kstNow()) : null;
+  const left = `<a class="btn call" href="tel:119">119 전화 · 긴급 신고</a>
+  <p class="small muted">버튼이 반응하지 않으면 휴대폰 전화 앱에서 <b class="num" style="color:var(--fg)">119</b>를 직접 누르세요. 이 버튼을 눌렀다고 신고가 접수된 것은 아닙니다.</p>
+  <div class="card"><div class="row between"><h2>내 위치</h2>${g.status === 'ok' ? '<span class="badge b-ok">GPS 확인</span>' : g.status === 'loading' ? '<span class="badge b-info">확인 중</span>' : '<span class="badge b-warn">현재 위치 미확인</span>'}</div>
+  ${g.status === 'ok' ? `<dl class="facts"><dt>위도</dt><dd class="num">${Fmt.dec(g.lat, 6)}<br><span class="small muted">${Fmt.dms(g.lat, 'N', 'S')}</span></dd><dt>경도</dt><dd class="num">${Fmt.dec(g.lng, 6)}<br><span class="small muted">${Fmt.dms(g.lng, 'E', 'W')}</span></dd><dt>오차 범위</dt><dd class="num">약 ±${Math.round(g.acc)}m</dd><dt>확인 시각</dt><dd class="num">${esc(g.at)} (한국 시간)</dd></dl>`
+    : `<p><b>현재 위치 미확인</b></p><p class="small muted">${{ idle: '버튼을 눌렀을 때만 위치 권한을 요청합니다.', loading: '위치를 찾는 중입니다 (최대 15초).', denied: '위치 권한이 거부되었습니다. 표지판 번호와 마지막 경유지를 직접 입력하세요.', failed: 'GPS로 위치를 얻지 못했습니다. 하늘이 트인 곳에서 다시 시도하거나 직접 입력하세요.', unsupported: '이 실행 환경에서는 위치 기능을 쓸 수 없습니다. 직접 입력하세요.' }[g.status]}</p>`}
+  <button class="btn-primary btn-block" data-act="geo" ${g.status === 'loading' ? 'disabled' : ''}>${g.status === 'ok' ? '위치 다시 확인' : '내 위치 확인'}</button></div>
+  <div class="card"><h2>신고 정보 직접 입력</h2>
+   <label for="s-sign">국가지점번호 · 탐방로 표지판 번호<input id="s-sign" data-sbind="sign" value="${esc(state.sos.sign)}" placeholder="예: 다바 1234 5678 / 지리 01-05" autocomplete="off"></label>
+   <label for="s-last">마지막으로 지난 경유지<input id="s-last" data-sbind="last" value="${esc(state.sos.last)}" autocomplete="off"></label>
+   ${c ? `<div class="chips">${[...new Set(c.points.map(p => p.name))].map(n => `<button data-act="sos-last" data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
+   <label for="s-detail">사고 내용<textarea id="s-detail" data-sbind="detail" placeholder="예: 하산 중 발목 부상, 걷기 어려움">${esc(state.sos.detail)}</textarea></label>
+   <label for="s-inj">부상 인원<input id="s-inj" type="text" inputmode="numeric" data-sbind="injured" value="${esc(state.sos.injured)}" placeholder="예: 1명"></label></div>
+  <div class="card" style="border-style:dashed"><div class="eyebrow">참고 정보 · 실제 위치 아님</div><p>${exp ? `일정상 지금은 <b>${esc(exp)}</b> 예정입니다.` : '오늘 산행 일정이 없어 일정상 예상 위치가 없습니다.'}</p><p class="small muted">계산된 예상치라 신고 문구에 넣지 않습니다.</p></div>
+  <div class="card"><h2>신고용 위치</h2><pre class="prebox" id="sos-text">${esc(sosText(c, m))}</pre>
+   <button class="btn-primary btn-block" data-act="copy-sos">신고용 위치 복사</button>
+   ${state.copyFallback && state.copyFallback.key === 'sos' ? `<div class="notice n-warn">자동 복사가 지원되지 않습니다. 위 글을 그대로 읽어 주거나, 아래 칸을 길게 눌러 복사하세요.</div><textarea id="fb-sos" readonly rows="8">${esc(sosText(c, m))}</textarea>` : ''}
+   <p class="small muted">이 내용은 일정 저장이나 일정 복사에 포함되지 않고 기기에 남지 않습니다.</p></div>`;
+  const right = `<div class="card"><h2>위치 지도</h2><div class="map" id="map-sos"></div><p class="map-note" id="map-sos-note">${g.status === 'ok' ? '빨간 점이 확인된 내 위치, 초록 선은 선택한 코스입니다.' : '내 위치를 확인하면 지도에 표시됩니다. 초록 선은 선택한 코스입니다.'}</p></div>${centersBlock(c)}${disasterBlock(c)}`;
+  return `<div><div class="eyebrow">긴급 도움</div><h1>119 신고와 위치 확인</h1></div><div class="cols"><div class="stack">${left}</div><div class="sticky-col">${right}</div></div>`;
+}
+function sosText(c, m) {
+  const g = state.sos.geo, s = state.sos, L = ['[119 신고용 위치]'];
+  L.push(`산·코스: ${c ? `${m.name}(${m.region}) ${c.name}` : '미선택'}`);
+  L.push(g.status === 'ok' ? `GPS 좌표: 위도 ${Fmt.dec(g.lat, 6)}, 경도 ${Fmt.dec(g.lng, 6)} (${Fmt.dms(g.lat, 'N', 'S')}, ${Fmt.dms(g.lng, 'E', 'W')}) 오차 약 ±${Math.round(g.acc)}m, ${g.at} 확인` : 'GPS 좌표: 현재 위치 미확인');
+  L.push(`국가지점번호·표지판: ${s.sign.trim() || '미입력'}`, `마지막 경유지: ${s.last.trim() || '미입력'}`, `사고 내용: ${s.detail.trim() || '미입력'}`, `부상 인원: ${s.injured.trim() || '미입력'}`);
+  return L.join('\n');
+}
+function centersBase(c) {
+  const g = state.sos.geo;
+  if (g.status === 'ok') return { kind: '현재 위치 기준', lat: g.lat, lng: g.lng, area: c ? c.area || '' : '' };
+  const th = trailhead(c);
+  if (th) return { kind: `들머리 기준 (${th.name}${th.approx ? ', 근사 좌표' : ''})`, lat: th.lat, lng: th.lng, area: c.area || '' };
+  return null;
+}
+function pickField(it, re) { const k = Object.keys(it).find(k => re.test(k)); return k ? String(it[k]).trim() : ''; }
+function centersBlock(c) {
+  const base = centersBase(c), res = state.results.centers;
+  let h = `<div class="card"><div class="row between"><h2>인근 119안전센터</h2>${base ? `<span class="badge b-info">${base.kind.startsWith('현재') ? '현재 위치 기준' : '들머리 기준'}</span>` : ''}</div>`;
+  if (!base) h += `<p class="small">현재 위치와 들머리 위치가 모두 확인되지 않아 거리 계산을 생략했습니다.</p>`;
+  else h += `<p class="small muted">${esc(base.kind)}${base.area ? ` · 조회 지역 ${esc(base.area)}` : ''}</p>`;
+  if (res && res.status === 'ok') {
+    const d = res.data;
+    const list = d.items.map(it => { const co = Geo.fromItem(it); return { it, name: pickField(it, /센터명|안전센터|name/i) || pickField(it, /명$/), addr: pickField(it, /주소|addr/i), phone: pickField(it, /전화|tel/i), co, km: co && base ? Geo.km(base, co) : null }; })
+      .sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9)).slice(0, 3);
+    h += list.length ? list.map(x => `<div class="ptrow"><b>${esc(x.name || '이름 미기재')}</b><span class="small">${esc(x.addr || '주소 미기재')}</span>
+      <span class="num small">${x.km != null ? `직선거리 ${x.km.toFixed(1)}km` : '거리 미계산 (원자료에 좌표 없음 · 같은 지역 소재)'}</span>
+      <div class="row">${x.co ? `<a class="btn btn-sm" href="${LINKS.mapPin(x.name, x.co.lat, x.co.lng)}" target="_blank" rel="noopener">지도 열기</a>` : `<a class="btn btn-sm" href="${LINKS.mapSearch(x.addr || x.name)}" target="_blank" rel="noopener">지도 열기</a>`}${/^[0-9\-]{7,}$/.test(x.phone.replace(/\s/g, '')) ? `<a class="btn btn-sm" href="tel:${esc(x.phone.replace(/\s/g, ''))}">센터 문의 ${esc(x.phone)}</a>` : ''}</div>
+      <span class="small muted">출처 ${esc(d.source)} · 조회 ${esc(d.fetchedAt)}</span></div>`).join('') : '<p class="small">조회 지역에서 일치하는 센터를 찾지 못했습니다.</p>';
+    h += `<p class="small muted">거리는 위치 비교용이며 구조대 출동 여부나 도착 시간을 뜻하지 않습니다.</p>`;
+  } else if (base) {
+    h += `<p><span class="badge b-warn">인근 센터 정보 ${res && res.status === 'failed' ? '조회 실패' : '미연결'}</span></p><p class="small">확인되지 않은 센터 이름이나 전화번호는 표시하지 않습니다.${res && res.error ? ` (${esc(res.error)})` : ''}</p>`;
+  }
+  return h + `<div class="grid2"><a class="btn btn-sm" href="${LINKS.mapSearch(((base && base.area) || '') + ' 119안전센터')}" target="_blank" rel="noopener">지도에서 119안전센터 검색</a><a class="btn btn-sm" href="${LINKS.nfa}" target="_blank" rel="noopener">소방청 공식 안내</a></div></div>`;
+}
+function disasterBlock(c) {
+  const res = state.results.disaster;
+  let h = `<div class="card"><div class="row between"><h2>인근 재난·통제 정보</h2>`;
+  if (res && res.status === 'ok') {
+    h += `<span class="badge b-ok">행정안전부 자료</span></div>`;
+    h += res.data.items.length ? rawItems(res.data.items, 5) + `<p class="small muted">출처 ${esc(res.data.source)} · 조회 ${esc(res.data.fetchedAt)} · 지역 ‘${esc(res.data.area)}’ 포함 항목</p>` : `<p class="small">조회 범위에서 ‘${esc(res.data.area)}’ 관련 재난문자가 없습니다. (출처 ${esc(res.data.source)}, 조회 ${esc(res.data.fetchedAt)})</p>`;
+  } else h += `<span class="badge b-warn">재난·통제 정보 미확인</span></div><p class="small">${res && res.status === 'failed' ? '조회에 실패했습니다. 재난이 없다는 뜻이 아닙니다.' : '공식 재난·통제 자료가 연결되지 않았습니다. 재난이 없다는 뜻이 아닙니다.'}</p>`;
+  return h + `<div class="grid2"><a class="btn btn-sm" href="${LINKS.safekorea}" target="_blank" rel="noopener">국민재난안전포털</a><a class="btn btn-sm" href="${LINKS.knps}" target="_blank" rel="noopener">국립공원공단</a></div></div>`;
+}
+
+function requestGeo() {
+  if (!('geolocation' in navigator)) { state.sos.geo = { status: 'unsupported' }; rerender(); return; }
+  state.sos.geo = { status: 'loading' }; rerender();
+  try {
+    navigator.geolocation.getCurrentPosition(pos => {
+      state.sos.geo = { status: 'ok', lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy, at: Fmt.kstNow().text };
+      state.results.centers = null; rerender(); loadEmergencyData();
+    }, err => { state.sos.geo = { status: err && err.code === 1 ? 'denied' : 'failed' }; rerender(); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  } catch (e) { state.sos.geo = { status: 'unsupported' }; rerender(); }
+}
+
+/* ── 데이터 로딩 ── */
+let wxKey = '';
+async function loadTableData() {
+  const c = course(); if (!c) return; const s = Schedule.compute(c, state.plan); if (!s) return;
+  const peak = s.rows.find(r => r.point.kind === 'peak'); const th = c.points[0];
+  const key = [c.id, state.plan.date, state.plan.startTime, state.plan.speed, JSON.stringify(state.plan.rests), Api.base].join('|');
+  if (key === wxKey) return; wxKey = key;
+  const pts = [];
+  if (Geo.valid(th.lat, th.lng)) pts.push({ role: '들머리', name: th.name, lat: th.lat, lng: th.lng, from: Fmt.clock(Math.max(0, s.summary.start - 60)), to: Fmt.clock(Math.min(1439, s.summary.end + 60)) });
+  if (peak && Geo.valid(peak.point.lat, peak.point.lng)) pts.push({ role: '정상 부근', name: peak.point.name, lat: peak.point.lat, lng: peak.point.lng, from: Fmt.clock(Math.max(0, peak.arrive - 120)), to: Fmt.clock(Math.min(1439, peak.arrive + 120)) });
+  const w = pts.length ? await Api.weather({ date: state.plan.date, points: pts }) : { status: 'failed', error: '들머리·정상 좌표가 없어 예보 지점을 정할 수 없습니다' };
+  if (key !== wxKey) return;
+  state.results.weather = w; if (state.tab === 'table') rerender();
+}
+let forestKey = '';
+async function loadForest() {
+  const c = course(); if (!c) return; const name = mountainOf(c).name;
+  const key = name + '|' + Api.base; if (key === forestKey && state.results.forestMountain) return; forestKey = key;
+  const one = Api.netlify && Api.base == null;
+  const [fm, ft] = one ? [await Api.forestMountain(name), null] : await Promise.all([Api.forestMountain(name), Api.forestTrails(name)]);
+  if (key !== forestKey) return;
+  state.results.forestMountain = fm; state.results.forestTrails = ft; if (state.tab === 'course') rerender();
+}
+async function loadEmergencyData() {
+  const c = course(), base = centersBase(c);
+  const area = (base && base.area) || (c && c.area) || '';
+  const [ce, di] = await Promise.all([base ? Api.centers({ area, lat: base.lat, lng: base.lng }) : Promise.resolve(null), Api.disaster({ area })]);
+  state.results.centers = ce; state.results.disaster = di; if (state.tab === 'sos') rerender();
+}
+
+/* ── 렌더 ── */
+function mountMaps() {
+  const c = course();
+  if (state.tab === 'course' || state.tab === 'plan' || state.tab === 'table') {
+    if (!c) return; const lay = routeLayers(c);
+    if (state.tab === 'course') { const ft = state.results.forestTrails; if (ft && ft.status === 'ok') ft.data.items.forEach((it, i) => { const co = Geo.fromItem(it); if (co) lay.points.push({ ...co, label: `산림청 자료 ${i + 1}`, kind: 'extra', showLabel: false }); }); }
+    MapView.mount({ course: 'map-course', plan: 'map-plan', table: 'map-table' }[state.tab], lay);
+  } else if (state.tab === 'sos') {
+    const lay = c ? routeLayers(c) : { points: [] }; lay.points.forEach(p => p.showLabel = false);
+    const g = state.sos.geo; if (g.status === 'ok') lay.me = g;
+    MapView.mount('map-sos', lay);
+  } else if (state.tab === 'edit') {
+    MapView.mount('map-edit', routeLayers(editorAsCourse()));
+  } else if (MapView.map) { try { MapView.map.remove(); } catch (e) { } MapView.map = null; }
+}
+function render() {
+  renderChrome();
+  const app = document.getElementById('app');
+  const focusId = document.activeElement && document.activeElement.id; let sel = null; try { sel = focusId ? document.activeElement.selectionStart : null; } catch (e) { }
+  app.innerHTML = { course: viewCourse, plan: viewPlan, table: viewTable, saved: viewSaved, sos: viewSOS, edit: viewEditor, api: viewApi }[state.tab]();
+  if (focusId) { const el = document.getElementById(focusId); if (el && el !== document.body) { el.focus({ preventScroll: true }); try { if (sel != null && el.setSelectionRange) el.setSelectionRange(sel, sel); } catch (e) { } } }
+  mountMaps();
+  if (state.tab === 'table') loadTableData();
+}
+function rerender() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+
+/* ── 이벤트 ── */
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act, v = b.dataset.v, p = state.plan;
+  switch (a) {
+    case 'go': go(v); break;
+    case 'back': back(); break;
+    case 'open-m': state.openMountain = state.openMountain === v ? null : v; rerender(); break;
+    case 'pick': pick(v); break;
+    case 'pick-api': pickApiMountain(v); break;
+    case 'api-course': startEditorFromApi(v); break;
+    case 'preview': state.courseId = v; state.plan = newPlan(course(v)); state.planId = null; state.results = {}; rerender(); loadForest(); break;
+    case 'new-course': startEditor(null, false, b.dataset.m, v); break;
+    case 'edit-course': startEditor(course(v), !!b.dataset.copy); break;
+    case 'del-course':
+      if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = '한 번 더 누르면 삭제'; b.classList.add('btn-danger'); return; }
+      state.userCourses = state.userCourses.filter(c => c.id !== v);
+      if (state.courseId === v) { state.courseId = 'ex-jungsanri'; state.plan = newPlan(course()); }
+      toast(persist() ? '코스를 삭제했습니다' : '삭제했지만 기기 저장에 실패했습니다'); rerender(); break;
+    case 'row-up': case 'row-down': { const i = +v, j = a === 'row-up' ? i - 1 : i + 1, r = state.editor.rows; [r[i], r[j]] = [r[j], r[i]]; rerender(); break; }
+    case 'row-del': state.editor.rows.splice(+v, 1); rerender(); break;
+    case 'row-add': state.editor.rows.splice(+v, 0, { key: uid(), name: '', kind: 'waypoint', lat: '', lng: '', km: '', min: '', steep: false }); rerender(); break;
+    case 'redraw-edit': MapView.mount('map-edit', routeLayers(editorAsCourse())); break;
+    case 'save-course': saveCourse(); break;
+    case 'speed': p.speed = v; rerender(); break;
+    case 'rest-add': p.rests[v] = { min: 10, kind: 'rest' }; rerender(); break;
+    case 'rest-del': delete p.rests[v]; rerender(); break;
+    case 'rest-kind': p.rests[v].kind = b.dataset.k; rerender(); break;
+    case 'rest-step': {
+      if (!p.rests[v]) p.rests[v] = { min: 0, kind: 'rest' };
+      p.rests[v].min = Math.max(0, (Number(p.rests[v].min) || 0) + Number(b.dataset.d));
+      if (p.rests[v].min === 0 && state.tab === 'table') delete p.rests[v];
+      rerender(); break; }
+    case 'save-plan': {
+      const id = state.planId || 'pl-' + uid(); state.planId = id;
+      const rec = { id, courseId: state.courseId, plan: JSON.parse(JSON.stringify(p)), savedAt: Fmt.kstNow().text };
+      const i = state.saved.findIndex(x => x.id === id); if (i >= 0) state.saved[i] = rec; else state.saved.push(rec);
+      toast(persist() ? '이 기기에 일정을 저장했습니다' : '저장에 실패했습니다. 일정 복사로 보관하세요'); rerender(); break; }
+    case 'copy-plan': { const c = course(); copyText(scheduleText(c, mountainOf(c), p, Schedule.compute(c, p)), 'plan'); break; }
+    case 'open-plan': { const sv = state.saved.find(x => x.id === v); state.courseId = sv.courseId; state.plan = JSON.parse(JSON.stringify(sv.plan)); state.planId = sv.id; state.results = {}; go('table'); break; }
+    case 'del-plan':
+      if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = '한 번 더 누르면 삭제'; b.classList.add('btn-danger'); return; }
+      state.saved = state.saved.filter(x => x.id !== v); if (state.planId === v) state.planId = null; toast(persist() ? '삭제했습니다' : '삭제했지만 기기 저장에 실패했습니다'); rerender(); break;
+    case 'save-cfg': {
+      state.config.apiBase = document.getElementById('cfg-base').value.trim();
+      state.config.direct = {}; document.querySelectorAll('[data-dcfg]').forEach(i => state.config.direct[i.dataset.dcfg] = i.value.trim());
+      const ok = persist(); wxKey = ''; forestKey = ''; state.results = {};
+      Api.probe(state.config.apiBase).then(c => { rerender(); toast(c ? 'API 서버에 연결했습니다' : 'API 서버에 연결하지 못했습니다' + (ok ? '' : ' (설정 저장 실패)')); });
+      break; }
+    case 'geo': requestGeo(); break;
+    case 'sos-last': state.sos.last = v; rerender(); break;
+    case 'copy-sos': { const c = course(); copyText(sosText(c, c ? mountainOf(c) : null), 'sos'); break; }
+  }
+});
+let planT;
+document.addEventListener('input', ev => {
+  const t = ev.target, p = state.plan;
+  if (t.dataset.bind === 'query') { state.query = t.value; const m = allMountains().find(x => t.value.trim() && x.name.includes(t.value.trim())); if (m) state.openMountain = m.id; document.getElementById('mlist').innerHTML = mountainList(); }
+  else if (t.dataset.pbind) { p[t.dataset.pbind] = t.value; if (t.dataset.pbind === 'date') state.results.weather = null; const pv = document.getElementById('plan-preview'); const c = course(); if (pv && c) pv.outerHTML = planPreview(c, p); }
+  else if (t.dataset.lbind) p.limit[t.dataset.lbind] = t.value;
+  else if (t.dataset.restmin) {
+    const n = Math.max(0, parseInt(t.value, 10) || 0);
+    if (!p.rests[t.dataset.restmin]) p.rests[t.dataset.restmin] = { min: n, kind: 'rest' }; else p.rests[t.dataset.restmin].min = n;
+    clearTimeout(planT); planT = setTimeout(rerender, 350);
+  }
+  else if (t.dataset.ebind) state.editor[t.dataset.ebind] = t.value;
+  else if (t.dataset.rbind) { const r = state.editor.rows[+t.dataset.i]; r[t.dataset.rbind] = t.type === 'checkbox' ? t.checked : t.value; if (t.dataset.rbind === 'lat' || t.dataset.rbind === 'lng') r.approx = false; }
+  else if (t.dataset.sbind) { state.sos[t.dataset.sbind] = t.value; const c = course(), txt = sosText(c, c ? mountainOf(c) : null); const pre = document.getElementById('sos-text'); if (pre) pre.textContent = txt; const fb = document.getElementById('fb-sos'); if (fb) fb.value = txt; }
+});
+document.addEventListener('submit', ev => {
+  if (ev.target.id === 'sform') { ev.preventDefault(); const q = document.getElementById('q').value; state.query = q; runApiSearch(q); }
+});
+document.addEventListener('change', ev => {
+  const t = ev.target;
+  if (t.dataset.rbind === 'steep' || t.dataset.rbind === 'kind') state.editor.rows[+t.dataset.i][t.dataset.rbind] = t.type === 'checkbox' ? t.checked : t.value;
+  if (t.dataset.ebind === 'type') state.editor.type = t.value;
+  if (t.dataset.restmin) { clearTimeout(planT); rerender(); }
+});
+
+(async function boot() {
+  const data = Store.load();
+  if (data) { state.userCourses = data.userCourses || []; state.userMountains = data.userMountains || []; state.saved = data.saved || []; state.config = Object.assign(state.config, data.config || {}); }
+  state.plan = newPlan(course());
+  const h = (location.hash || '').slice(1);
+  if (h && VIEWS.includes(h) && h !== 'edit' && h !== 'course') { nav.stack = ['course', h]; state.tab = h; }
+  try { history.replaceState({ v: state.tab }, '', '#' + state.tab); } catch (e) { }
+  render();
+  await Api.probe(state.config.apiBase);
+  if (Api.base == null) await Api.probeNetlify();
+  rerender();
+  if (state.tab === 'course') loadForest();
+  if (state.tab === 'sos') loadEmergencyData();
+})();
 </script>
-</body>
-</html>
+
+</body></html>
